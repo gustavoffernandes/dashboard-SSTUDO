@@ -141,8 +141,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role,
       userCompanyId,
       loading,
-      isAdmin: role === "admin",
+      isAdmin: role === "admin" || role === "super_admin",
       isCompanyUser: role === "company_user",
+      isSuperAdmin: role === "super_admin",
       signIn,
       signOut,
     }}>
