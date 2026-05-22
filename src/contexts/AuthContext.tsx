@@ -3,7 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
-export type AppRole = "admin" | "user" | "company_user";
+export type AppRole = "admin" | "user" | "company_user" | "super_admin";
 
 interface AuthContextType {
   user: User | null;
@@ -13,6 +13,7 @@ interface AuthContextType {
   loading: boolean;
   isAdmin: boolean;
   isCompanyUser: boolean;
+  isSuperAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
 }
@@ -140,8 +141,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       role,
       userCompanyId,
       loading,
-      isAdmin: role === "admin",
+      isAdmin: role === "admin" || role === "super_admin",
       isCompanyUser: role === "company_user",
+      isSuperAdmin: role === "super_admin",
       signIn,
       signOut,
     }}>

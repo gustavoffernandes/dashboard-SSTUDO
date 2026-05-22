@@ -25,7 +25,7 @@ export function ProativaTopbar({ onMenuClick }: TopbarProps) {
   const [showResults, setShowResults] = useState(false);
   const navigate = useNavigate();
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, isSuperAdmin } = useAuth();
 
   const searchableItems = allSearchableItems.filter(item => !item.adminOnly || isAdmin);
 
@@ -103,6 +103,11 @@ export function ProativaTopbar({ onMenuClick }: TopbarProps) {
       </div>
 
       <div className="flex items-center gap-2 md:gap-3">
+        {isSuperAdmin && (
+          <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-black shadow-md">
+            ⚡ Modo GOD
+          </span>
+        )}
         <div className="ml-1 md:ml-2 flex items-center gap-2 md:gap-3">
           <div className="h-8 w-8 md:h-9 md:w-9 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs md:text-sm font-semibold shrink-0">
             {initials}
