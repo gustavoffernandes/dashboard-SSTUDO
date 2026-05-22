@@ -39,6 +39,7 @@ export default function Reports() {
   const { plans, tasks } = useActionPlans();
   const [selectedCompany, setSelectedCompany] = useState<string>("");
   const [selectedFormId, setSelectedFormId] = useState<string>("");
+  const [selectedSector, setSelectedSector] = useState<string>("");
   
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [compareSector, setCompareSector] = useState<string>("");
@@ -56,12 +57,25 @@ export default function Reports() {
     : "Todos os formulários";
 
   const getReportPoolByCompany = (companyId: string) => {
-    const companyPool = getCompanyRespondents(companyId);
-    if (!selectedFormId || companyId !== effectiveCompany) return companyPool;
-    return companyPool.filter((r) => r.configId === selectedFormId);
+    let companyPool = getCompanyRespondents(companyId);
+    if (selectedFormId && companyId === effectiveCompany) {
+      companyPool = companyPool.filter((r) => r.configId === selectedFormId);
+    }
+    if (selectedSector && companyId === effectiveCompany) {
+      companyPool = companyPool.filter((r) => r.sector === selectedSector);
+    }
+    return companyPool;
   };
 
   const pool = getReportPoolByCompany(effectiveCompany);
+
+  // Sectors available in the current company (after form filter, before sector filter)
+  const companySectors = [...new Set(
+    getCompanyRespondents(effectiveCompany)
+      .filter(r => !selectedFormId || r.configId === selectedFormId)
+      .map(r => r.sector)
+      .filter(Boolean)
+  )].sort();
 
   const getQuestionAverageFromPool = (questionId: string, targetPool: typeof pool): number => {
     const withAnswer = targetPool.filter(r => r.answers[questionId] !== undefined);
