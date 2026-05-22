@@ -1,154 +1,107 @@
-# SSTudo — Dashboard de Análise de Pesquisas
+# PROATIVA — Plataforma de Diagnóstico Organizacional em SST
 
-Sistema de dashboard para leitura, armazenamento e análise de respostas vindas do Google Forms (via Google Sheets).  
-Desenvolvido com **React**, **Vite**, **TypeScript** e **Lovable Cloud** (PostgreSQL, Auth, Edge Functions).
+Plataforma SaaS para diagnóstico de **Saúde e Segurança do Trabalho (SST)** baseada na metodologia **PROART**.  
+Permite que empresas apliquem pesquisas (via Google Forms ou link público), visualizem indicadores em dashboards, comparem unidades/filiais, gerem planos de ação e exportem relatórios.
+
+**Stack:** React 18 · Vite 5 · TypeScript · Tailwind CSS · shadcn/ui · Recharts · Supabase (Auth, Postgres com RLS, Edge Functions).
 
 ---
 
 ## 📋 Pré-requisitos
 
-| Ferramenta | Windows | Mac |
+| Ferramenta | Windows | Mac/Linux |
 |---|---|---|
-| **Node.js** (v18+) | [Baixar instalador .msi (LTS)](https://nodejs.org/) | `brew install node` |
-| **Git** | [Baixar Git for Windows](https://git-scm.com/download/win) | `brew install git` (ou já vem instalado) |
-
-> **Mac:** Se não tem o Homebrew, instale com:  
-> ```bash
-> /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-> ```
+| **Node.js** 18+ | [Instalador LTS](https://nodejs.org/) | `brew install node` |
+| **Git** | [Git for Windows](https://git-scm.com/download/win) | `brew install git` |
 
 ---
 
-## 🚀 Instalação Rápida
-
-### 1. Clonar o repositório
+## 🚀 Instalação
 
 ```bash
-git clone <URL_DO_SEU_REPOSITORIO>
-cd remix-of-data-insight-hub-1
-```
-
-### 2. Instalar dependências
-
-```bash
+git clone <URL_DO_REPOSITORIO>
+cd proativa-dashboard
 npm install
-```
-
-### 3. Rodar a aplicação
-
-```bash
 npm run dev
 ```
 
-Acesse no navegador: **http://localhost:8080/**
+Acesse: **http://localhost:8080/**
+
+### Variáveis de ambiente
+
+As credenciais públicas do Supabase já estão configuradas no arquivo `.env` (chaves anon/publishable — seguras para o front).  
+Segredos do backend (`GOOGLE_SHEETS_API_KEY`, `RESEND_API_KEY`, etc.) ficam no painel do Supabase em **Edge Functions → Secrets**.
 
 ---
 
 ## 🔑 Funcionalidades
 
+### Dashboards e análise
 | Página | Descrição |
 |---|---|
-| **Dashboard** | Visão geral com KPIs, gráficos de fatores de risco e métricas consolidadas |
-| **Análise da Pesquisa** | Análise detalhada por pergunta com gráficos interativos |
-| **Heatmap** | Mapa de calor por fator e setor da empresa |
-| **Comparativo** | Comparação entre empresas cadastradas |
+| **Dashboard** | Visão geral com KPIs, gráficos por fator de risco e métricas consolidadas |
+| **Análise da Pesquisa** | Análise pergunta a pergunta com gráficos interativos |
+| **Heatmap** | Mapa de calor por fator (Contexto, Vivências, Saúde, Práticas) ou **TODOS** os fatores, com filtro por **setor** e classificação de risco (Bom / Moderado / Ruim) |
+| **Comparativo** | Comparação entre empresas e filiais cadastradas |
+| **Evolução Temporal** | Comparação histórica entre formulários do mesmo título |
 | **Demografia** | Distribuição demográfica dos respondentes |
-| **Planos de Ação** | Criação e acompanhamento de planos baseados nos riscos |
-| **Anotações** | Notas e observações por empresa |
-| **Relatórios** | Exportação de relatórios em PDF |
-| **Integrações** | Configuração da sincronização com Google Sheets |
-| **Configurações** | Gestão de usuários (admin) |
+| **Respostas Livres** | Visualização de respostas abertas/discursivas |
 
----
-
-## 📊 Guia de Integração com Google Forms (Passo a Passo)
-
-Esta seção explica como configurar a integração entre o Google Forms e o SSTudo para importar automaticamente as respostas das pesquisas.
-
-### Passo 1: Criar o formulário no Google Forms
-
-1. Acesse [Google Forms](https://docs.google.com/forms)
-2. Crie um novo formulário com as perguntas da pesquisa
-3. O formulário deve conter as seguintes colunas demográficas (opcionais, mas recomendadas):
-   - **Nome** do respondente
-   - **Idade** ou faixa etária
-   - **Sexo/Gênero**
-   - **Setor/Departamento**
-4. As demais perguntas serão tratadas como respostas da pesquisa (escala Likert: 1 a 5)
-
-### Passo 2: Vincular a uma planilha Google Sheets
-
-1. No Google Forms, clique na aba **Respostas**
-2. Clique no ícone do Google Sheets (ícone verde) → **Criar nova planilha**
-3. A planilha será criada automaticamente com as respostas
-
-### Passo 3: Tornar a planilha acessível
-
-A planilha precisa ser acessível pela API. Existem duas opções:
-
-**Opção A — Planilha pública (mais simples):**
-1. Abra a planilha no Google Sheets
-2. Clique em **Compartilhar** (botão no canto superior direito)
-3. Em "Acesso geral", altere para **Qualquer pessoa com o link**
-4. Permissão: **Leitor**
-
-**Opção B — Planilha privada com API Key restrita:**
-1. No [Google Cloud Console](https://console.cloud.google.com), restrinja a API Key ao domínio da sua planilha
-
-### Passo 4: Obter o ID da planilha
-
-O ID da planilha está na URL:
-
-```
-https://docs.google.com/spreadsheets/d/[ID_DA_PLANILHA]/edit
-```
-
-Exemplo: se a URL é `https://docs.google.com/spreadsheets/d/1h2CrVt0qGKP6re7l9lMG3F17GJ5DtIdLvp9QNqELCTI/edit`, o ID é `1h2CrVt0qGKP6re7l9lMG3F17GJ5DtIdLvp9QNqELCTI`.
-
-### Passo 5: Verificar o nome da aba
-
-1. Abra a planilha no Google Sheets
-2. Na parte inferior, verifique o nome da aba onde estão as respostas
-3. Geralmente é **"Respostas ao formulário 1"** ou **"Form Responses 1"**
-4. Copie o nome exato (incluindo acentos e espaços)
-
-### Passo 6: Cadastrar no SSTudo
-
-1. Faça login no sistema como **administrador**
-2. No menu lateral, acesse **Integrações**
-3. Clique em **Nova Integração**
-4. Preencha os campos:
-   - **Nome da Empresa**: Nome que identifica a empresa pesquisada
-   - **ID da Planilha**: Cole o ID obtido no Passo 4
-   - **Nome da Aba**: Nome exato da aba (Passo 5)
-   - **URL do Formulário** (opcional): Link direto para a planilha ou formulário
-5. Clique em **Salvar**
-
-### Passo 7: Sincronizar
-
-1. Na lista de integrações, localize a empresa cadastrada
-2. Clique no botão **Sincronizar**
-3. Aguarde a conclusão — o sistema mostrará quantas respostas foram importadas
-4. Acesse o **Dashboard** para visualizar os dados
-
-### ⚠️ Observações Importantes
-
-- A sincronização **substitui** todas as respostas anteriores da empresa (não é incremental)
-- O sistema identifica automaticamente as colunas de **nome**, **idade**, **sexo** e **setor** pelo nome do cabeçalho
-- Todas as demais colunas são tratadas como **perguntas da pesquisa**
-- Respostas devem usar escala numérica (1 a 5) para os cálculos funcionarem corretamente
-- A `GOOGLE_SHEETS_API_KEY` deve estar configurada nos segredos do backend
-
----
-
-## 🔒 Autenticação e Permissões
-
-| Papel | Permissões |
+### Gestão
+| Página | Descrição |
 |---|---|
-| **Admin** | Gerenciar integrações, criar usuários, acessar todas as funcionalidades |
-| **Usuário** | Visualizar dashboards, criar planos de ação e anotações |
+| **Empresas** | Cadastro de empresas e filiais (cada filial é tratada como empresa independente, identificada por nome + cidade) |
+| **Formulários** | Cadastro de formulários (Google Sheets ou link público) |
+| **Respondentes** | Lista de sessões e respostas individuais |
+| **Planos de Ação** | Criação e acompanhamento de tarefas vinculadas a formulários |
+| **Anotações** | Notas e observações por empresa |
+| **Relatórios** | Exportação PDF/CSV com filtro por **setor**, coluna de **risco** colorida (verde/amarelo/vermelho) |
+| **Usuários** | Gestão de usuários e papéis (admin) |
+| **Assinatura** | Gerenciamento do plano contratado |
 
-O primeiro usuário admin deve ser criado diretamente no backend. Após isso, o admin pode criar novos usuários pela tela de **Configurações**.
+---
+
+## 👥 Papéis de Usuário
+
+| Papel | Acesso |
+|---|---|
+| **user** | Visualiza dashboards, cria planos de ação e anotações da sua conta |
+| **company_user** | Acesso restrito da empresa (com anonimização de dados pessoais) |
+| **admin** | Tudo do `user` + gestão de empresas, formulários, respondentes, usuários e integrações da sua família/conta |
+| **super_admin** (GOD) | Acesso global a todos os dados de todas as contas. Não precisa de plano nem assinatura. Criado manualmente |
+
+> Papéis são armazenados na tabela `user_roles` (nunca em `profiles`) e protegidos por RLS via a função `has_role()`.
+
+### Criando o usuário GOD (super_admin)
+
+1. **Supabase → Authentication → Users → Add user** (marque *auto-confirm*).
+2. Execute no SQL Editor:
+   ```sql
+   INSERT INTO public.user_roles (user_id, role, parent_admin_id, company_id)
+   VALUES ('<UUID_DO_USUARIO>', 'super_admin', NULL, NULL);
+   ```
+
+Não é necessário criar `subscription` nem `system_account` para esse usuário.
+
+---
+
+## 📊 Coleta de Respostas
+
+A plataforma suporta **duas formas** de coletar respostas:
+
+### Opção A — Link público (`/pesquisa/:slug`)
+O respondente acessa o link, preenche o formulário diretamente na plataforma e a resposta é salva no banco. Não exige Google Sheets.
+
+### Opção B — Google Forms + Google Sheets
+1. Crie o formulário no [Google Forms](https://docs.google.com/forms) e vincule a uma planilha de respostas.
+2. Compartilhe a planilha como **Qualquer pessoa com o link → Leitor**.
+3. Copie o **ID da planilha** da URL (`/spreadsheets/d/<ID>/edit`) e o **nome exato da aba**.
+4. No app, vá em **Formulários → Nova Integração**, preencha empresa, ID, aba e (opcional) URL.
+5. Clique em **Sincronizar**. Existe ainda a edge function `auto-sync` para sincronização periódica.
+
+**Colunas reconhecidas automaticamente:** Nome, Idade, Sexo/Gênero, Setor. As demais colunas são tratadas como perguntas (escala Likert 1–5).
+
+> ⚠️ A sincronização **substitui** as respostas anteriores daquela integração (não é incremental).
 
 ---
 
@@ -156,18 +109,33 @@ O primeiro usuário admin deve ser criado diretamente no backend. Após isso, o 
 
 ```
 src/
-├── components/       → Componentes reutilizáveis (UI, gráficos, tabelas)
-├── pages/            → Páginas (Dashboard, Login, Relatórios, Configurações)
-├── hooks/            → Hooks customizados (useSurveyData, useActionPlans)
-├── integrations/     → Cliente backend + tipagens TypeScript
-├── contexts/         → Contextos React (AuthContext)
-├── lib/              → Utilitários (exportação PDF, metodologia PROART)
-└── data/             → Dados mock para desenvolvimento
+├── components/        Componentes reutilizáveis (UI, gráficos, layout)
+├── pages/             Páginas (rotas em src/App.tsx)
+├── hooks/             Hooks (useSurveyData, useActionPlans, usePlans, ...)
+├── contexts/          AuthContext
+├── integrations/      Cliente Supabase + tipagens geradas
+├── lib/               Utilitários (pdfExport, proartMethodology, ...)
+└── data/              Mock data para desenvolvimento
 
 supabase/
-├── migrations/       → Estrutura SQL do banco
-└── functions/        → Funções backend serverless
-    └── sync-google-sheets/  → Sincronização com Google Sheets
+├── migrations/        Schema SQL versionado (RLS, funções, triggers)
+└── functions/         Edge Functions
+    ├── sync-google-sheets/   Importa respostas da planilha
+    ├── auto-sync/            Sincronização automática agendada
+    └── create-user/          Criação de usuários por admin
+```
+
+---
+
+## 🧪 Scripts
+
+```bash
+npm run dev          # ambiente de desenvolvimento (porta 8080)
+npm run build        # build de produção
+npm run preview      # serve o build localmente
+npm run lint         # ESLint
+npm run test         # vitest (run único)
+npm run test:watch   # vitest em watch
 ```
 
 ---
@@ -176,15 +144,16 @@ supabase/
 
 | Problema | Solução |
 |---|---|
-| Tela em branco / "Cannot connect" | Verifique se o servidor está rodando (`npm run dev`) |
-| Porta 8080 em uso | **Windows:** `netstat -ano \| findstr :8080` → `taskkill /PID <PID> /F`. **Mac:** `lsof -i :8080` → `kill -9 <PID>` |
-| Erro na sincronização "Failed to fetch" | Verifique se a `GOOGLE_SHEETS_API_KEY` está configurada nos segredos do backend |
-| Erro "Erro ao acessar Google Sheets" | Verifique se a planilha está compartilhada como "Qualquer pessoa com o link" e se o ID está correto |
-| "Nenhuma resposta encontrada" | Verifique se o nome da aba está correto e se há respostas na planilha |
-| Dados não aparecem no dashboard | Selecione a empresa correta no filtro do dashboard após sincronizar |
+| Tela em branco | Confirme que `npm run dev` está rodando sem erros |
+| Porta 8080 ocupada | **Win:** `netstat -ano \| findstr :8080` → `taskkill /PID <PID> /F` · **Mac/Linux:** `lsof -i :8080` → `kill -9 <PID>` |
+| "Failed to fetch" ao sincronizar | Verifique `GOOGLE_SHEETS_API_KEY` nos segredos do Supabase |
+| "Erro ao acessar Google Sheets" | Planilha precisa estar pública (link → Leitor) e o ID correto |
+| "Nenhuma resposta encontrada" | Confira o nome exato da aba e se existem respostas na planilha |
+| Dashboard vazio | Selecione a empresa/formulário no filtro após sincronizar |
+| Usuário não vê dados de outra conta | Comportamento esperado — apenas `super_admin` enxerga tudo |
 
 ---
 
 ## 📄 Licença
 
-© 2026 SSTudo. Todos os direitos reservados.
+© 2026 PROATIVA. Todos os direitos reservados.
