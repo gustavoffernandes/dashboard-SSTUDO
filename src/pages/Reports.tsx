@@ -399,7 +399,14 @@ export default function Reports() {
                       const scale = PROART_SCALES.find(sc => sc.id === s.id);
                       const scaleType = scale?.type === "positive" ? "positive" as const : "negative" as const;
                       const risk = classifyRisk(val, scaleType);
-                      return <td key={s.id} className="px-4 py-2 text-center"><span className={cn("font-medium", getRiskColor(risk))}>{val.toFixed(2)}</span></td>;
+                      return (
+                        <td key={s.id} className="px-4 py-2 text-center">
+                          <div className="inline-flex flex-col items-center leading-tight">
+                            <span className={cn("font-bold", getRiskColor(risk))}>{val.toFixed(2)}</span>
+                            <span className={cn("text-[10px] font-semibold uppercase tracking-wide", getRiskColor(risk))}>{getRiskLabel(risk).replace("Risco ", "")}</span>
+                          </div>
+                        </td>
+                      );
                     })}
                   </tr>
                 ))}</tbody></table>
