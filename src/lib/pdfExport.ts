@@ -627,13 +627,22 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
     addHeader(doc, company.name, `Detalhamento - ${section.name}`);
     addFooter(doc, pageNum.value);
 
+    const isNegativeSection = section.id === "vivencias" || section.id === "saude";
+    const riskFor = (avg: number) => {
+      const v = isNegativeSection ? 6 - avg : avg;
+      if (v >= 4) return { label: "Bom", bg: COLORS.success };
+      if (v >= 3) return { label: "Moderado", bg: COLORS.warning };
+      return { label: "Ruim", bg: COLORS.danger };
+    };
+
     const tableData = qs.map(q => {
       const avg = data.getQuestionAverage(q.id, companyId);
       const dist = data.getAnswerDistribution(q.id, companyId);
+      const r = riskFor(avg);
       return [
         `${q.number}`,
         q.text,
-        avg.toFixed(2),
+        `${avg.toFixed(2)}\n${r.label}`,
         ...dist.map(d => `${d.count} (${d.percentage}%)`),
       ];
     });
@@ -648,10 +657,23 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
       columnStyles: {
         0: { cellWidth: 10, halign: "center" },
         1: { cellWidth: 45 },
-        2: { cellWidth: 12, halign: "center", fontStyle: "bold" },
+        2: { cellWidth: 16, halign: "center", fontStyle: "bold" },
       },
       alternateRowStyles: { fillColor: COLORS.bg },
       margin: { left: MARGIN, right: MARGIN },
+      didParseCell: (hookData) => {
+        if (hookData.section === "body" && hookData.column.index === 2) {
+          const rowIdx = hookData.row.index;
+          const q = qs[rowIdx];
+          if (q) {
+            const avg = data.getQuestionAverage(q.id, companyId);
+            const r = riskFor(avg);
+            hookData.cell.styles.fillColor = r.bg;
+            hookData.cell.styles.textColor = COLORS.white;
+            hookData.cell.styles.fontStyle = "bold";
+          }
+        }
+      },
     });
   });
 
