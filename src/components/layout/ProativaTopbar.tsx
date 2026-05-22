@@ -25,7 +25,7 @@ export function ProativaTopbar({ onMenuClick }: TopbarProps) {
   const [showResults, setShowResults] = useState(false);
   const navigate = useNavigate();
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, isSuperAdmin } = useAuth();
 
   const searchableItems = allSearchableItems.filter(item => !item.adminOnly || isAdmin);
 
