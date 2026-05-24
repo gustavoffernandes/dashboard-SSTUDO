@@ -217,7 +217,7 @@ export default function Users() {
         <div className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-semibold text-card-foreground">Lista de Usuários</h3>
-            <span className="text-xs text-muted-foreground">{userRoles.length}/{userLimit} usuário(s)</span>
+            <span className="text-xs text-muted-foreground">{isSuperAdmin ? `${userRoles.length} usuário(s)` : `${userRoles.length}/${userLimit} usuário(s)`}</span>
           </div>
 
           {isLoading ? (
