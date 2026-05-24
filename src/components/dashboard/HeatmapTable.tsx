@@ -129,7 +129,7 @@ export function HeatmapTable({ sectionId, columns, getQuestionAverage, getAvaila
             <span className="inline-block w-4 h-4 rounded bg-warning/70" />
             <span className="text-xs text-foreground font-medium">Moderado</span>
             <span className="text-[10px] text-muted-foreground">
-              ({isNegative ? "2.1 – 3.0" : "3.0 – 3.9"})
+              (2.30 – 3.69)
             </span>
           </span>
           <span className="flex items-center gap-1.5">
