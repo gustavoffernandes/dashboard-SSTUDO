@@ -37,15 +37,17 @@ Deno.serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // Garante que o caller é admin
-    const { data: callerRole } = await adminClient
+    // Garante que o caller é admin ou super_admin
+    const { data: callerRoles } = await adminClient
       .from("user_roles")
       .select("role, parent_admin_id")
-      .eq("user_id", callerUser.id)
-      .eq("role", "admin")
-      .maybeSingle();
+      .eq("user_id", callerUser.id);
 
-    if (!callerRole) {
+    const rolesList = callerRoles || [];
+    const isSuperAdmin = rolesList.some((r: any) => r.role === "super_admin");
+    const adminRow = rolesList.find((r: any) => r.role === "admin");
+
+    if (!isSuperAdmin && !adminRow) {
       return new Response(
         JSON.stringify({ error: "Acesso negado. Apenas administradores podem gerenciar usuários." }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -53,21 +55,21 @@ Deno.serve(async (req) => {
     }
 
     // O "dono" da família é o próprio caller (admins raiz têm parent_admin_id NULL).
-    // Se algum dia um admin filho existir, herdamos do parent.
-    const familyOwnerId: string = callerRole.parent_admin_id ?? callerUser.id;
+    const familyOwnerId: string = adminRow?.parent_admin_id ?? callerUser.id;
 
     const body = await req.json();
 
     // ==========================================
-    // LISTAR USUÁRIOS DA FAMÍLIA
+    // LISTAR USUÁRIOS
+    // Super admin: lista TODOS os usuários do sistema
+    // Admin: apenas a própria família
     // ==========================================
     if (body.action === "list") {
-      // Roles da família: o próprio dono + filhos
-      const { data: rolesData, error: rolesErr } = await adminClient
-        .from("user_roles")
-        .select("*")
-        .or(`user_id.eq.${familyOwnerId},parent_admin_id.eq.${familyOwnerId}`)
-        .order("role");
+      let rolesQuery = adminClient.from("user_roles").select("*").order("role");
+      if (!isSuperAdmin) {
+        rolesQuery = rolesQuery.or(`user_id.eq.${familyOwnerId},parent_admin_id.eq.${familyOwnerId}`);
+      }
+      const { data: rolesData, error: rolesErr } = await rolesQuery;
 
       if (rolesErr) {
         return new Response(JSON.stringify({ error: rolesErr.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -76,15 +78,15 @@ Deno.serve(async (req) => {
       const userIds = Array.from(new Set((rolesData || []).map((r: any) => r.user_id)));
       const emailMap: Record<string, string> = {};
 
-      // Busca emails apenas dos usuários da família
-      for (const uid of userIds) {
+      // Busca emails dos usuários (paralelizado)
+      await Promise.all(userIds.map(async (uid) => {
         const { data: u } = await adminClient.auth.admin.getUserById(uid);
         if (u?.user) emailMap[uid] = u.user.email || "";
-      }
+      }));
 
       const users = userIds.map((id) => ({ id, email: emailMap[id] || "" }));
       return new Response(
-        JSON.stringify({ users, roles: rolesData || [] }),
+        JSON.stringify({ users, roles: rolesData || [], isSuperAdmin }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
