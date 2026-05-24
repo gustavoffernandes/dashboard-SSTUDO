@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { usePlans, useCurrentUserPlan } from "@/hooks/usePlans";
 
 const ROLE_LABEL: Record<string, string> = {
+  super_admin: "Super Admin",
   admin: "Administrador",
   user: "Usuário Geral",
   company_user: "Usuário Empresa",
