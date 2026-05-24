@@ -130,8 +130,11 @@ Deno.serve(async (req) => {
     if (body.action === "delete") {
       const { user_id, role_id } = body;
 
-      if (user_id === familyOwnerId) {
+      if (!isSuperAdmin && user_id === familyOwnerId) {
         return new Response(JSON.stringify({ error: "Não é possível excluir o administrador raiz da conta." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      if (isSuperAdmin && user_id === callerUser.id) {
+        return new Response(JSON.stringify({ error: "Você não pode excluir a si mesmo." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       const { data: targetRole } = await adminClient
@@ -140,7 +143,7 @@ Deno.serve(async (req) => {
         .eq("id", role_id)
         .maybeSingle();
 
-      if (!targetRole || targetRole.parent_admin_id !== familyOwnerId) {
+      if (!targetRole || (!isSuperAdmin && targetRole.parent_admin_id !== familyOwnerId)) {
         return new Response(JSON.stringify({ error: "Acesso negado." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
