@@ -293,6 +293,7 @@ export default function Users() {
                           {isCurrentUser && <span className="ml-1 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">você</span>}
                         </p>
                         <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0",
+                          ur.role === "super_admin" ? "bg-amber-400 text-black" :
                           ur.role === "admin" ? "bg-destructive/10 text-destructive" :
                           ur.role === "company_user" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
                           {ROLE_LABEL[ur.role] || ur.role}
