@@ -252,6 +252,7 @@ export default function Users() {
                           <td className="px-4 py-3 text-center">
                             <div>
                               <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                                ur.role === "super_admin" ? "bg-amber-400 text-black" :
                                 ur.role === "admin" ? "bg-destructive/10 text-destructive" :
                                 ur.role === "company_user" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
                                 {ROLE_LABEL[ur.role] || ur.role}
