@@ -629,9 +629,13 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
 
     const isNegativeSection = section.id === "vivencias" || section.id === "saude";
     const riskFor = (avg: number) => {
-      const v = isNegativeSection ? 6 - avg : avg;
-      if (v >= 4) return { label: "Bom", bg: COLORS.success };
-      if (v >= 3) return { label: "Moderado", bg: COLORS.warning };
+      if (isNegativeSection) {
+        if (avg >= 3.70) return { label: "Ruim", bg: COLORS.danger };
+        if (avg >= 2.30) return { label: "Moderado", bg: COLORS.warning };
+        return { label: "Bom", bg: COLORS.success };
+      }
+      if (avg >= 3.70) return { label: "Bom", bg: COLORS.success };
+      if (avg >= 2.30) return { label: "Moderado", bg: COLORS.warning };
       return { label: "Ruim", bg: COLORS.danger };
     };
 
