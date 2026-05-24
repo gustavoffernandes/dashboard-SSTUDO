@@ -1,16 +1,30 @@
 import { questions, type Question } from "@/data/mockData";
 
+// PROART thresholds:
+// Positive scales: >=3.70 BAIXO (Bom), 2.30-3.69 MEDIO (Moderado), <2.30 ALTO (Ruim)
+// Negative scales: <=2.29 BAIXO (Bom), 2.30-3.69 MEDIO (Moderado), >=3.70 ALTO (Ruim)
+function getRisk(value: number, isNegative: boolean): "low" | "medium" | "high" {
+  if (isNegative) {
+    if (value >= 3.70) return "high";
+    if (value >= 2.30) return "medium";
+    return "low";
+  }
+  if (value >= 3.70) return "low";
+  if (value >= 2.30) return "medium";
+  return "high";
+}
+
 function getColor(value: number, isNegative: boolean): string {
-  const v = isNegative ? 6 - value : value;
-  if (v >= 4) return "bg-success/80 text-success-foreground";
-  if (v >= 3) return "bg-warning/70 text-warning-foreground";
+  const r = getRisk(value, isNegative);
+  if (r === "low") return "bg-success/80 text-success-foreground";
+  if (r === "medium") return "bg-warning/70 text-warning-foreground";
   return "bg-destructive/70 text-destructive-foreground";
 }
 
 function getLabel(value: number, isNegative: boolean): string {
-  const v = isNegative ? 6 - value : value;
-  if (v >= 4) return "Bom";
-  if (v >= 3) return "Moderado";
+  const r = getRisk(value, isNegative);
+  if (r === "low") return "Bom";
+  if (r === "medium") return "Moderado";
   return "Ruim";
 }
 
