@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "Usuário não encontrado." }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const isInFamily = targetRole.user_id === familyOwnerId || targetRole.parent_admin_id === familyOwnerId;
-      if (!isInFamily) {
+      if (!isSuperAdmin && !isInFamily) {
         return new Response(JSON.stringify({ error: "Acesso negado." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
