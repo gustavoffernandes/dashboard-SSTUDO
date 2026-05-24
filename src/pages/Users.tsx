@@ -9,13 +9,14 @@ import { cn } from "@/lib/utils";
 import { usePlans, useCurrentUserPlan } from "@/hooks/usePlans";
 
 const ROLE_LABEL: Record<string, string> = {
+  super_admin: "Super Admin",
   admin: "Administrador",
   user: "Usuário Geral",
   company_user: "Usuário Empresa",
 };
 
 export default function Users() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const { data: plans = [] } = usePlans();
   const { data: currentPlan } = useCurrentUserPlan();
@@ -78,7 +79,7 @@ export default function Users() {
     enabled: isAdmin,
   });
 
-  const isAtLimit = userRoles.length >= userLimit;
+  const isAtLimit = !isSuperAdmin && userRoles.length >= userLimit;
 
   const handleCreateUser = async () => {
     if (!newUserEmail || !newUserPassword) { toast({ title: "Preencha todos os campos", variant: "destructive" }); return; }
@@ -216,7 +217,7 @@ export default function Users() {
         <div className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
           <div className="p-4 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-semibold text-card-foreground">Lista de Usuários</h3>
-            <span className="text-xs text-muted-foreground">{userRoles.length}/{userLimit} usuário(s)</span>
+            <span className="text-xs text-muted-foreground">{isSuperAdmin ? `${userRoles.length} usuário(s)` : `${userRoles.length}/${userLimit} usuário(s)`}</span>
           </div>
 
           {isLoading ? (
@@ -251,6 +252,7 @@ export default function Users() {
                           <td className="px-4 py-3 text-center">
                             <div>
                               <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                                ur.role === "super_admin" ? "bg-amber-400 text-black" :
                                 ur.role === "admin" ? "bg-destructive/10 text-destructive" :
                                 ur.role === "company_user" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
                                 {ROLE_LABEL[ur.role] || ur.role}
@@ -291,6 +293,7 @@ export default function Users() {
                           {isCurrentUser && <span className="ml-1 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">você</span>}
                         </p>
                         <span className={cn("inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold shrink-0",
+                          ur.role === "super_admin" ? "bg-amber-400 text-black" :
                           ur.role === "admin" ? "bg-destructive/10 text-destructive" :
                           ur.role === "company_user" ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground")}>
                           {ROLE_LABEL[ur.role] || ur.role}
