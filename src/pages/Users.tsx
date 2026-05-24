@@ -79,7 +79,7 @@ export default function Users() {
     enabled: isAdmin,
   });
 
-  const isAtLimit = userRoles.length >= userLimit;
+  const isAtLimit = !isSuperAdmin && userRoles.length >= userLimit;
 
   const handleCreateUser = async () => {
     if (!newUserEmail || !newUserPassword) { toast({ title: "Preencha todos os campos", variant: "destructive" }); return; }
