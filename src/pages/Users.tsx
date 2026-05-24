@@ -16,7 +16,7 @@ const ROLE_LABEL: Record<string, string> = {
 };
 
 export default function Users() {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isSuperAdmin } = useAuth();
   const qc = useQueryClient();
   const { data: plans = [] } = usePlans();
   const { data: currentPlan } = useCurrentUserPlan();
