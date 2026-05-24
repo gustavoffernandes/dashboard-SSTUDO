@@ -136,7 +136,7 @@ export function HeatmapTable({ sectionId, columns, getQuestionAverage, getAvaila
             <span className="inline-block w-4 h-4 rounded bg-destructive/70" />
             <span className="text-xs text-foreground font-medium">Ruim</span>
             <span className="text-[10px] text-muted-foreground">
-              ({isNegative ? "> 3.0" : "< 3.0"})
+              ({isNegative ? "≥ 3.70" : "< 2.30"})
             </span>
           </span>
         </div>
