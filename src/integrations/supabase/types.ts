@@ -499,6 +499,13 @@ export type Database = {
             referencedRelation: "google_forms_config"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "survey_responses_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "public_form_configs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       survey_sessions: {
@@ -543,6 +550,13 @@ export type Database = {
             referencedRelation: "google_forms_config"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "survey_sessions_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "public_form_configs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sync_logs: {
@@ -579,6 +593,13 @@ export type Database = {
             columns: ["config_id"]
             isOneToOne: false
             referencedRelation: "google_forms_config"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sync_logs_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "public_form_configs"
             referencedColumns: ["id"]
           },
         ]
@@ -657,11 +678,74 @@ export type Database = {
             referencedRelation: "google_forms_config"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_roles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "public_form_configs"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
     Views: {
-      [_ in never]: never
+      public_form_configs: {
+        Row: {
+          cnpj: string | null
+          company_name: string | null
+          description: string | null
+          end_date: string | null
+          form_status: string | null
+          form_title: string | null
+          id: string | null
+          instructions: string | null
+          is_active: boolean | null
+          is_anonymous: boolean | null
+          require_consent: boolean | null
+          require_password: boolean | null
+          sector: string | null
+          sectors: Json | null
+          start_date: string | null
+          survey_password: string | null
+        }
+        Insert: {
+          cnpj?: string | null
+          company_name?: string | null
+          description?: string | null
+          end_date?: string | null
+          form_status?: string | null
+          form_title?: string | null
+          id?: string | null
+          instructions?: string | null
+          is_active?: boolean | null
+          is_anonymous?: boolean | null
+          require_consent?: boolean | null
+          require_password?: boolean | null
+          sector?: string | null
+          sectors?: Json | null
+          start_date?: string | null
+          survey_password?: string | null
+        }
+        Update: {
+          cnpj?: string | null
+          company_name?: string | null
+          description?: string | null
+          end_date?: string | null
+          form_status?: string | null
+          form_title?: string | null
+          id?: string | null
+          instructions?: string | null
+          is_active?: boolean | null
+          is_anonymous?: boolean | null
+          require_consent?: boolean | null
+          require_password?: boolean | null
+          sector?: string | null
+          sectors?: Json | null
+          start_date?: string | null
+          survey_password?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       action_plan_owner_admin: { Args: { _plan_id: string }; Returns: string }
