@@ -105,11 +105,10 @@ export default function PublicSurvey() {
 
       // If form has no sectors, check the company's placeholder config
       if (configSectors.length === 0 && (data as any).cnpj) {
-        const { data: placeholder } = await supabase
-          .from("google_forms_config")
+        const { data: placeholder } = await (supabase as any)
+          .from("public_form_configs")
           .select("sectors")
           .eq("cnpj", (data as any).cnpj)
-          .eq("spreadsheet_id", "__placeholder__")
           .maybeSingle();
         if (placeholder) {
           configSectors = extractSectors((placeholder as any).sectors);
