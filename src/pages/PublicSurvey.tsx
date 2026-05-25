@@ -77,8 +77,8 @@ export default function PublicSurvey() {
   useEffect(() => {
     if (!id) { setError("Link inválido"); setLoading(false); return; }
     (async () => {
-      const { data, error: err } = await supabase
-        .from("google_forms_config")
+      const { data, error: err } = await (supabase as any)
+        .from("public_form_configs")
         .select("*")
         .eq("id", id)
         .maybeSingle();
