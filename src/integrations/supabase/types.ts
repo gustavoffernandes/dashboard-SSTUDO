@@ -777,6 +777,7 @@ export type Database = {
             Returns: boolean
           }
         | { Args: { _role: string; _user_id: string }; Returns: boolean }
+      is_config_active: { Args: { _config_id: string }; Returns: boolean }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       promote_to_admin: { Args: { _user_id: string }; Returns: undefined }
       provision_subscription_admin: {
