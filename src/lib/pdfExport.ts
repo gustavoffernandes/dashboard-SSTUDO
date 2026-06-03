@@ -387,6 +387,21 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
     doc.text("Classificacao dos Fatores", MARGIN, y);
     y += 6;
 
+    const positiveFactors = [
+      "Divisao das Tarefas",
+      "Divisao Social do Trabalho",
+      "Estilo Coletivista",
+    ];
+    const negativeFactors = [
+      "Estilo Individualista",
+      "Falta de Sentido no Trabalho",
+      "Esgotamento Mental",
+      "Falta de Reconhecimento",
+      "Danos Psicologicos",
+      "Danos Sociais",
+      "Danos Fisicos",
+    ];
+
     autoTable(doc, {
       startY: y,
       head: [
@@ -397,21 +412,25 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
       ],
       body: [
         [
-          { content: removeDiacritics("Bom >= 3,70"), styles: { halign: "center" } },
-          { content: removeDiacritics("Bom <= 2,29"), styles: { halign: "center" } },
+          { content: positiveFactors.map(f => "- " + removeDiacritics(f)).join("\n"), styles: { halign: "left", valign: "top", fontStyle: "bold", fillColor: [232, 245, 233], textColor: COLORS.text, cellPadding: 4 } },
+          { content: negativeFactors.map(f => "- " + removeDiacritics(f)).join("\n"), styles: { halign: "left", valign: "top", fontStyle: "bold", fillColor: [253, 232, 232], textColor: COLORS.text, cellPadding: 4 } },
         ],
         [
-          { content: removeDiacritics("Moderado 2,30 - 3,69"), styles: { halign: "center" } },
-          { content: removeDiacritics("Moderado 2,30 - 3,69"), styles: { halign: "center" } },
+          { content: removeDiacritics("Bom >= 3,70"), styles: { halign: "center", fillColor: COLORS.success, textColor: COLORS.white, fontStyle: "bold" } },
+          { content: removeDiacritics("Bom <= 2,29"), styles: { halign: "center", fillColor: COLORS.success, textColor: COLORS.white, fontStyle: "bold" } },
         ],
         [
-          { content: removeDiacritics("Ruim < 2,30"), styles: { halign: "center" } },
-          { content: removeDiacritics("Ruim >= 3,70"), styles: { halign: "center" } },
+          { content: removeDiacritics("Moderado 2,30 - 3,69"), styles: { halign: "center", fillColor: COLORS.warning, textColor: COLORS.white, fontStyle: "bold" } },
+          { content: removeDiacritics("Moderado 2,30 - 3,69"), styles: { halign: "center", fillColor: COLORS.warning, textColor: COLORS.white, fontStyle: "bold" } },
+        ],
+        [
+          { content: removeDiacritics("Ruim < 2,30"), styles: { halign: "center", fillColor: COLORS.danger, textColor: COLORS.white, fontStyle: "bold" } },
+          { content: removeDiacritics("Ruim >= 3,70"), styles: { halign: "center", fillColor: COLORS.danger, textColor: COLORS.white, fontStyle: "bold" } },
         ],
       ],
       theme: "grid",
       styles: { fontSize: 8, cellPadding: 3, halign: "center", valign: "middle", lineColor: [180, 180, 180], lineWidth: 0.2 },
-      headStyles: { fontSize: 8, fontStyle: "bold" },
+      headStyles: { fontSize: 9, fontStyle: "bold" },
       bodyStyles: { textColor: COLORS.text },
       margin: { left: MARGIN, right: MARGIN },
       tableWidth: CONTENT_WIDTH,
