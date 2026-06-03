@@ -132,7 +132,7 @@ export function HeatmapTable({ questions, columns, getQuestionAverage, hideLegen
           <div className="flex-1 rounded-lg border border-border bg-muted/20 p-4">
             <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-success inline-block" />
-              Fatores Positivos (Satisfação)
+              Fatores Positivos
             </h4>
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between border-b border-border/40 pb-2">
@@ -162,7 +162,7 @@ export function HeatmapTable({ questions, columns, getQuestionAverage, hideLegen
           <div className="flex-1 rounded-lg border border-border bg-muted/20 p-4">
             <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
               <span className="w-1.5 h-4 rounded-full bg-destructive inline-block" />
-              Fatores Negativos (Desgaste/Risco)
+              Fatores Negativos
             </h4>
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between border-b border-border/40 pb-2">
