@@ -291,7 +291,7 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
     };
 
     // Build two header rows: scales (with colSpan) + factors
-    const scaleHeaderRow: any[] = [{ content: "Setor", rowSpan: 2, styles: { halign: "center", valign: "middle", fillColor: COLORS.primary, textColor: COLORS.white } }];
+    const scaleHeaderRow: any[] = [{ content: "Escala", styles: { halign: "center", valign: "middle", fillColor: COLORS.primary, textColor: COLORS.white } }];
     PROART_SCALES.forEach(s => {
       scaleHeaderRow.push({
         content: removeDiacritics(`${s.shortName} - ${s.name.replace(/\s*\([^)]*\)\s*$/, "")}`),
@@ -299,15 +299,19 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
         styles: { halign: "center", fillColor: COLORS.primary, textColor: COLORS.white },
       });
     });
-    const factorHeaderRow: any[] = ALL_FACTORS.map(f => ({
-      content: removeDiacritics(f.name),
-      styles: {
-        halign: "center",
-        fillColor: f.type === "positive" ? [220, 235, 245] as [number, number, number] : [245, 230, 230] as [number, number, number],
-        textColor: COLORS.text,
-        fontStyle: "bold" as const,
-      },
-    }));
+    const factorHeaderRow: any[] = [
+      { content: "Fator", styles: { halign: "center", valign: "middle", fillColor: COLORS.white, textColor: COLORS.text, fontStyle: "bold" as const } },
+      ...ALL_FACTORS.map(f => ({
+        content: removeDiacritics(f.name),
+        styles: {
+          halign: "center",
+          fillColor: COLORS.white,
+          textColor: COLORS.text,
+          fontStyle: "bold" as const,
+        },
+      })),
+    ];
+
 
     // Body: each row = one sector, cells = "avg\nLabel" colored by risk
     type CellMeta = { value: number; label: string; bg: [number, number, number]; hasData: boolean };
