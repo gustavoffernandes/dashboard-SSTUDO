@@ -359,7 +359,7 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
     });
     y = (doc as any).lastAutoTable?.finalY + 6 || y + 40;
 
-    // Legend
+    // Legend (color key)
     y = checkPageBreak(doc, y, 10, company.name, "Legenda", pageNum);
     const legendItems: { label: string; bg: [number, number, number] }[] = [
       { label: "Baixo", bg: [200, 240, 200] },
@@ -377,7 +377,46 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
       doc.text(it.label, lx + 6, y);
       lx += 6 + doc.getTextWidth(it.label) + 6;
     });
+    y += 8;
+
+    // Factor classification legend table
+    y = checkPageBreak(doc, y, 55, company.name, "Legenda", pageNum);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(...COLORS.primary);
+    doc.text("Classificacao dos Fatores", MARGIN, y);
     y += 6;
+
+    autoTable(doc, {
+      startY: y,
+      head: [
+        [
+          { content: removeDiacritics("Fatores Positivos"), styles: { halign: "center", fillColor: COLORS.success, textColor: COLORS.white } },
+          { content: removeDiacritics("Fatores Negativos"), styles: { halign: "center", fillColor: COLORS.danger, textColor: COLORS.white } },
+        ],
+      ],
+      body: [
+        [
+          { content: removeDiacritics("Bom >= 3,70"), styles: { halign: "center" } },
+          { content: removeDiacritics("Bom <= 2,29"), styles: { halign: "center" } },
+        ],
+        [
+          { content: removeDiacritics("Moderado 2,30 - 3,69"), styles: { halign: "center" } },
+          { content: removeDiacritics("Moderado 2,30 - 3,69"), styles: { halign: "center" } },
+        ],
+        [
+          { content: removeDiacritics("Ruim < 2,30"), styles: { halign: "center" } },
+          { content: removeDiacritics("Ruim >= 3,70"), styles: { halign: "center" } },
+        ],
+      ],
+      theme: "grid",
+      styles: { fontSize: 8, cellPadding: 3, halign: "center", valign: "middle", lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { fontSize: 8, fontStyle: "bold" },
+      bodyStyles: { textColor: COLORS.text },
+      margin: { left: MARGIN, right: MARGIN },
+      tableWidth: CONTENT_WIDTH,
+    });
+    y = (doc as any).lastAutoTable?.finalY + 4 || y + 40;
   }
 
   // ==================== 3. P×S MATRIX ====================
