@@ -780,14 +780,14 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
   });
 
   // Sector breakdown
-  const sectors = [...new Set(pool.map((r: any) => r.sector))].sort();
-  if (sectors.length > 0) {
+  const sectorsBreakdown = [...new Set(pool.map((r: any) => r.sector))].sort();
+  if (sectorsBreakdown.length > 0) {
     doc.addPage();
     pageNum.value++;
     addHeader(doc, company.name, "Respostas por Setor");
     addFooter(doc, pageNum.value);
 
-    const sectorTableData = sectors.map(sector => {
+    const sectorTableData = sectorsBreakdown.map(sector => {
       const sectorPool = pool.filter((r: any) => r.sector === sector);
       const pct = pool.length > 0 ? `${Math.round((sectorPool.length / pool.length) * 100)}%` : "0%";
       const sectionAvgs = availableSections.map(s => {
