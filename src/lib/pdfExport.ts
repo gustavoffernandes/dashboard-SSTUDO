@@ -311,6 +311,18 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
         },
       })),
     ];
+    const sectorHeaderRow: any[] = [
+      { content: "Setor", styles: { halign: "center", valign: "middle", fillColor: COLORS.primary, textColor: COLORS.white, fontStyle: "bold" as const } },
+      ...ALL_FACTORS.map(() => ({
+        content: "",
+        styles: {
+          halign: "center",
+          fillColor: COLORS.primary,
+          textColor: COLORS.white,
+          fontStyle: "bold" as const,
+        },
+      })),
+    ];
 
 
     // Body: each row = one sector, cells = "avg\nLabel" colored by risk
@@ -338,7 +350,7 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
 
     autoTable(doc, {
       startY: y,
-      head: [scaleHeaderRow, factorHeaderRow],
+      head: [scaleHeaderRow, factorHeaderRow, sectorHeaderRow],
       body: bodyRows,
       theme: "grid",
       styles: { fontSize: 6.5, cellPadding: 1.5, halign: "center", valign: "middle", lineColor: [180, 180, 180], lineWidth: 0.2 },
