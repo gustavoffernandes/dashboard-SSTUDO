@@ -10,7 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Filter } from "lucide-react";
-import { ALL_FACTORS } from "@/lib/proartMethodology";
+import { ALL_FACTORS, PROART_SCALES } from "@/lib/proartMethodology";
+import { cn } from "@/lib/utils";
 
 export default function Heatmap() {
   const { isCompanyUser, userCompanyId } = useAuth();
@@ -19,7 +20,18 @@ export default function Heatmap() {
   const [selectedSector, setSelectedSector] = useState<string>("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  const [selectedScale, setSelectedScale] = useState<string>("all");
   const [selectedFactors, setSelectedFactors] = useState<string[]>(ALL_FACTORS.map(f => f.id));
+
+  const handleScaleChange = (scaleId: string) => {
+    setSelectedScale(scaleId);
+    if (scaleId === "all") {
+      setSelectedFactors(ALL_FACTORS.map(f => f.id));
+    } else {
+      const scale = PROART_SCALES.find(s => s.id === scaleId);
+      setSelectedFactors(scale ? scale.factors.map(f => f.id) : []);
+    }
+  };
   const { isLoading, hasData, companies, respondents, formConfigs, getAvailableQuestions, getFormConfigsForCompany } = useSurveyData();
 
   const relevantForms = isCompanyUser && userCompanyId
