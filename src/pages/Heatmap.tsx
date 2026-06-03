@@ -131,6 +131,26 @@ export default function Heatmap() {
             <h1 className="text-2xl font-bold text-foreground">Heatmap de Satisfação</h1>
             <p className="text-sm text-muted-foreground mt-1">Mapa de calor por fator PROART</p>
           </div>
+
+          {/* Scale tabs */}
+          <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-card p-1 w-fit">
+            {[{ id: "all", label: "Todas as escalas" }, ...PROART_SCALES.map(s => ({ id: s.id, label: s.shortName }))].map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => handleScaleChange(opt.id)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-semibold rounded-md transition-colors",
+                  selectedScale === opt.id
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                title={opt.id === "all" ? "Mostrar todos os fatores" : PROART_SCALES.find(s => s.id === opt.id)?.name}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
             <FactorFilter selected={selectedFactors} onChange={setSelectedFactors} />
             {!isCompanyUser && <MultiSelectCompanies companies={companies} selected={selectedCompanies} onChange={(ids) => { setSelectedCompanies(ids); setSelectedFormId(""); }} />}
@@ -150,6 +170,7 @@ export default function Heatmap() {
             )}
             <DateRangeFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />
           </div>
+
 
           {selectedFactors.length === 0 ? (
             <p className="text-sm text-muted-foreground">Selecione pelo menos um fator para visualizar o heatmap.</p>
