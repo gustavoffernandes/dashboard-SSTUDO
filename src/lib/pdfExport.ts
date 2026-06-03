@@ -406,26 +406,26 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
       startY: y,
       head: [
         [
-          { content: removeDiacritics("Fatores Positivos"), styles: { halign: "center", fillColor: COLORS.success, textColor: COLORS.white } },
-          { content: removeDiacritics("Fatores Negativos"), styles: { halign: "center", fillColor: COLORS.danger, textColor: COLORS.white } },
+          { content: removeDiacritics("Fatores Positivos"), styles: { halign: "center", fillColor: [200, 240, 200] as [number, number, number], textColor: COLORS.text } },
+          { content: removeDiacritics("Fatores Negativos"), styles: { halign: "center", fillColor: [250, 200, 200] as [number, number, number], textColor: COLORS.text } },
         ],
       ],
       body: [
         [
-          { content: positiveFactors.map(f => "- " + removeDiacritics(f)).join("\n"), styles: { halign: "left", valign: "top", fontStyle: "bold", fillColor: [232, 245, 233], textColor: COLORS.text, cellPadding: 4 } },
-          { content: negativeFactors.map(f => "- " + removeDiacritics(f)).join("\n"), styles: { halign: "left", valign: "top", fontStyle: "bold", fillColor: [253, 232, 232], textColor: COLORS.text, cellPadding: 4 } },
+          { content: positiveFactors.map(f => "- " + removeDiacritics(f)).join("\n"), styles: { halign: "left", valign: "top", fontStyle: "bold", fillColor: COLORS.white, textColor: COLORS.text, cellPadding: 4 } },
+          { content: negativeFactors.map(f => "- " + removeDiacritics(f)).join("\n"), styles: { halign: "left", valign: "top", fontStyle: "bold", fillColor: COLORS.white, textColor: COLORS.text, cellPadding: 4 } },
         ],
         [
-          { content: removeDiacritics("Bom >= 3,70"), styles: { halign: "center", fillColor: COLORS.success, textColor: COLORS.white, fontStyle: "bold" } },
-          { content: removeDiacritics("Bom <= 2,29"), styles: { halign: "center", fillColor: COLORS.success, textColor: COLORS.white, fontStyle: "bold" } },
+          { content: removeDiacritics("Bom >= 3,70"), styles: { halign: "center", fillColor: [200, 240, 200] as [number, number, number], textColor: COLORS.text, fontStyle: "bold" } },
+          { content: removeDiacritics("Bom <= 2,29"), styles: { halign: "center", fillColor: [200, 240, 200] as [number, number, number], textColor: COLORS.text, fontStyle: "bold" } },
         ],
         [
-          { content: removeDiacritics("Moderado 2,30 - 3,69"), styles: { halign: "center", fillColor: COLORS.warning, textColor: COLORS.white, fontStyle: "bold" } },
-          { content: removeDiacritics("Moderado 2,30 - 3,69"), styles: { halign: "center", fillColor: COLORS.warning, textColor: COLORS.white, fontStyle: "bold" } },
+          { content: removeDiacritics("Moderado 2,30 - 3,69"), styles: { halign: "center", fillColor: [255, 240, 180] as [number, number, number], textColor: COLORS.text, fontStyle: "bold" } },
+          { content: removeDiacritics("Moderado 2,30 - 3,69"), styles: { halign: "center", fillColor: [255, 240, 180] as [number, number, number], textColor: COLORS.text, fontStyle: "bold" } },
         ],
         [
-          { content: removeDiacritics("Ruim < 2,30"), styles: { halign: "center", fillColor: COLORS.danger, textColor: COLORS.white, fontStyle: "bold" } },
-          { content: removeDiacritics("Ruim >= 3,70"), styles: { halign: "center", fillColor: COLORS.danger, textColor: COLORS.white, fontStyle: "bold" } },
+          { content: removeDiacritics("Ruim < 2,30"), styles: { halign: "center", fillColor: [250, 200, 200] as [number, number, number], textColor: COLORS.text, fontStyle: "bold" } },
+          { content: removeDiacritics("Ruim >= 3,70"), styles: { halign: "center", fillColor: [250, 200, 200] as [number, number, number], textColor: COLORS.text, fontStyle: "bold" } },
         ],
       ],
       theme: "grid",
