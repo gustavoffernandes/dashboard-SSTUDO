@@ -265,9 +265,9 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
   y += 4;
 
   // Build sector list from respondents (only sectors with at least one response)
-  const sectorsSet = new Set<string>();
-  pool.forEach((r: any) => { if (r.sector) sectorsSet.add(r.sector); });
-  const sectors = Array.from(sectorsSet).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const sectorListSet = new Set<string>();
+  pool.forEach((r: any) => { if (r.sector) sectorListSet.add(r.sector); });
+  const sectorList = Array.from(sectorListSet).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   if (sectors.length === 0) {
     doc.setFont("helvetica", "normal");
