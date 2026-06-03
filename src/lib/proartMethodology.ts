@@ -171,6 +171,17 @@ export const PROART_SCALES: ProartScale[] = [
 
 export const ALL_FACTORS = PROART_SCALES.flatMap(s => s.factors);
 
+// Map question id -> factor for fast lookup
+const QUESTION_TO_FACTOR: Record<string, ProartFactor> = (() => {
+  const m: Record<string, ProartFactor> = {};
+  ALL_FACTORS.forEach(f => f.questionIds.forEach(qid => { m[qid] = f; }));
+  return m;
+})();
+
+export function getFactorByQuestionId(questionId: string): ProartFactor | undefined {
+  return QUESTION_TO_FACTOR[questionId];
+}
+
 // ========== RISK CLASSIFICATION ==========
 
 /**
