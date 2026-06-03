@@ -128,26 +128,66 @@ export function HeatmapTable({ questions, columns, getQuestionAverage, hideLegen
       </div>
 
       {!hideLegend && (
-        <div className="rounded-lg border border-border bg-muted/20 px-4 py-2.5 flex flex-wrap items-center gap-x-6 gap-y-2 text-[11px]">
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block w-3.5 h-3.5 rounded bg-success/80" />
-            <span className="font-medium text-foreground">Bom</span>
-            <span className="text-muted-foreground">positivo ≥ 3,70 · negativo ≤ 2,29</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block w-3.5 h-3.5 rounded bg-warning/70" />
-            <span className="font-medium text-foreground">Moderado</span>
-            <span className="text-muted-foreground">2,30 – 3,69</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block w-3.5 h-3.5 rounded bg-destructive/70" />
-            <span className="font-medium text-foreground">Ruim</span>
-            <span className="text-muted-foreground">positivo &lt; 2,30 · negativo ≥ 3,70</span>
-          </span>
-          <span className="flex items-center gap-3 ml-auto">
-            <span className="flex items-center gap-1"><span className="w-1 h-3 rounded-full bg-success inline-block" /><span className="text-muted-foreground">Fator positivo</span></span>
-            <span className="flex items-center gap-1"><span className="w-1 h-3 rounded-full bg-destructive inline-block" /><span className="text-muted-foreground">Fator negativo</span></span>
-          </span>
+        <div className="flex flex-col sm:flex-row gap-4 mt-4">
+          <div className="flex-1 rounded-lg border border-border bg-muted/20 p-4">
+            <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <span className="w-1.5 h-4 rounded-full bg-success inline-block" />
+              Fatores Positivos (Satisfação)
+            </h4>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                <span className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-success/80 text-success-foreground font-bold">✓</span>
+                  <span className="font-medium">Bom</span>
+                </span>
+                <span className="text-muted-foreground font-semibold">≥ 3,70</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                <span className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-warning/70 text-warning-foreground font-bold">!</span>
+                  <span className="font-medium">Moderado</span>
+                </span>
+                <span className="text-muted-foreground font-semibold">2,30 – 3,69</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-destructive/70 text-destructive-foreground font-bold">×</span>
+                  <span className="font-medium">Ruim</span>
+                </span>
+                <span className="text-muted-foreground font-semibold">&lt; 2,30</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 rounded-lg border border-border bg-muted/20 p-4">
+            <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+              <span className="w-1.5 h-4 rounded-full bg-destructive inline-block" />
+              Fatores Negativos (Desgaste/Risco)
+            </h4>
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                <span className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-success/80 text-success-foreground font-bold">✓</span>
+                  <span className="font-medium">Bom</span>
+                </span>
+                <span className="text-muted-foreground font-semibold">≤ 2,29</span>
+              </div>
+              <div className="flex items-center justify-between border-b border-border/40 pb-2">
+                <span className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-warning/70 text-warning-foreground font-bold">!</span>
+                  <span className="font-medium">Moderado</span>
+                </span>
+                <span className="text-muted-foreground font-semibold">2,30 – 3,69</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                  <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-destructive/70 text-destructive-foreground font-bold">×</span>
+                  <span className="font-medium">Ruim</span>
+                </span>
+                <span className="text-muted-foreground font-semibold">≥ 3,70</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
