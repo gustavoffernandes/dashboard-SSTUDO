@@ -4,23 +4,23 @@ import { HeatmapTable } from "@/components/dashboard/HeatmapTable";
 import { MultiSelectCompanies } from "@/components/dashboard/MultiSelectCompanies";
 import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
 import { FormFilter } from "@/components/dashboard/FormFilter";
+import { FactorFilter } from "@/components/dashboard/FactorFilter";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useAuth } from "@/contexts/AuthContext";
-import { cn } from "@/lib/utils";
 import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Filter } from "lucide-react";
+import { ALL_FACTORS } from "@/lib/proartMethodology";
 
 export default function Heatmap() {
   const { isCompanyUser, userCompanyId } = useAuth();
-  const [activeSection, setActiveSection] = useState<string>("contexto");
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
   const [selectedFormId, setSelectedFormId] = useState<string>("");
   const [selectedSector, setSelectedSector] = useState<string>("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
-  const { isLoading, hasData, companies, respondents, formConfigs, getAvailableSections, getAvailableQuestions, getFormConfigsForCompany } = useSurveyData();
-  const availableSections = getAvailableSections();
+  const [selectedFactors, setSelectedFactors] = useState<string[]>(ALL_FACTORS.map(f => f.id));
+  const { isLoading, hasData, companies, respondents, formConfigs, getAvailableQuestions, getFormConfigsForCompany } = useSurveyData();
 
   const relevantForms = isCompanyUser && userCompanyId
     ? getFormConfigsForCompany(userCompanyId)
@@ -40,7 +40,6 @@ export default function Heatmap() {
     }
   };
 
-  // Available sectors (respect company/form filters loosely — show all)
   const availableSectors = useMemo(() => {
     let pool = respondents;
     if (selectedCompanies.length > 0) pool = pool.filter(r => selectedCompanies.includes(r.companyId));
@@ -51,7 +50,7 @@ export default function Heatmap() {
   if (isLoading) return <PageSkeleton />;
   if (!hasData) return <DashboardLayout><div className="flex flex-col items-center justify-center h-64 text-center"><p className="text-sm text-muted-foreground">Nenhum dado disponível.</p></div></DashboardLayout>;
 
-  let filteredRespondents = respondents.filter(r => {
+  const filteredRespondents = respondents.filter(r => {
     if (selectedSector && r.sector !== selectedSector) return false;
     if (!r.responseTimestamp) return !startDate && !endDate;
     const ts = new Date(r.responseTimestamp);
@@ -67,7 +66,6 @@ export default function Heatmap() {
   const showFormColumns = companyFormsToShow.length > 1;
 
   type HeatmapColumn = { id: string; name: string };
-
   let columns: HeatmapColumn[];
   let customGetQuestionAverage: (questionId: string, columnId?: string) => number;
 
@@ -104,7 +102,14 @@ export default function Heatmap() {
     };
   }
 
-  const showAll = activeSection === "todos";
+  // Build the question list from selected factors, restricted to questions with data.
+  const availableQuestions = getAvailableQuestions();
+  const availableIds = new Set(availableQuestions.map(q => q.id));
+  const selectedFactorObjs = ALL_FACTORS.filter(f => selectedFactors.includes(f.id));
+  const questionIdsFromFactors = new Set(selectedFactorObjs.flatMap(f => f.questionIds));
+  const displayedQuestions = availableQuestions
+    .filter(q => questionIdsFromFactors.has(q.id) && availableIds.has(q.id))
+    .sort((a, b) => a.number - b.number);
 
   return (
     <DashboardLayout>
@@ -112,23 +117,10 @@ export default function Heatmap() {
         <div className="animate-fade-in space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Heatmap de Satisfação</h1>
-            <p className="text-sm text-muted-foreground mt-1">Mapa de calor comparativo entre empresas</p>
+            <p className="text-sm text-muted-foreground mt-1">Mapa de calor por fator PROART</p>
           </div>
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setActiveSection("todos")}
-                className={cn("rounded-lg px-4 py-2 text-sm font-medium transition-all", showAll ? "bg-primary text-primary-foreground shadow-md" : "bg-secondary text-secondary-foreground hover:bg-secondary/80")}
-              >
-                Todos
-              </button>
-              {availableSections.map((s) => (
-                <button key={s.id} onClick={() => setActiveSection(s.id)}
-                  className={cn("rounded-lg px-4 py-2 text-sm font-medium transition-all", activeSection === s.id ? "bg-primary text-primary-foreground shadow-md" : "bg-secondary text-secondary-foreground hover:bg-secondary/80")}>
-                  {s.shortName}
-                </button>
-              ))}
-            </div>
+            <FactorFilter selected={selectedFactors} onChange={setSelectedFactors} />
             {!isCompanyUser && <MultiSelectCompanies companies={companies} selected={selectedCompanies} onChange={(ids) => { setSelectedCompanies(ids); setSelectedFormId(""); }} />}
             <FormFilter forms={relevantForms} selectedFormId={selectedFormId} onChange={handleFormChange} />
             {availableSectors.length > 0 && (
@@ -147,27 +139,13 @@ export default function Heatmap() {
             <DateRangeFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />
           </div>
 
-          {showAll ? (
-            <div className="space-y-6">
-              {availableSections.map((s) => (
-                <HeatmapTable
-                  key={s.id}
-                  sectionId={s.id}
-                  columns={columns}
-                  getQuestionAverage={customGetQuestionAverage}
-                  getAvailableQuestions={getAvailableQuestions}
-                  isNegativeSection={s.id === "vivencias" || s.id === "saude"}
-                  title={s.name}
-                />
-              ))}
-            </div>
+          {selectedFactors.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Selecione pelo menos um fator para visualizar o heatmap.</p>
           ) : (
             <HeatmapTable
-              sectionId={activeSection}
+              questions={displayedQuestions}
               columns={columns}
               getQuestionAverage={customGetQuestionAverage}
-              getAvailableQuestions={getAvailableQuestions}
-              isNegativeSection={activeSection === "vivencias" || activeSection === "saude"}
             />
           )}
         </div>
