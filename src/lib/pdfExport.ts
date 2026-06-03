@@ -255,28 +255,126 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
     y += 4;
   });
 
-  // Factor Summary Table
-  y = checkPageBreak(doc, y, 20, company.name, "Tabela de Fatores", pageNum);
+  // Classification of Factors by Sector — matrix table (scales × factors × sectorList)
+  y = checkPageBreak(doc, y, 40, company.name, "Classificacao dos Fatores por Setor", pageNum);
 
-  autoTable(doc, {
-    startY: y,
-    head: [["Escala", "Fator", "Tipo", "Media", "Classificacao"]],
-    body: factorData.map(f => [f.scaleName, removeDiacritics(f.factor.name), f.factor.type === "positive" ? "Positiva" : "Negativa", f.avg.toFixed(2), removeDiacritics(f.cls.label)]),
-    theme: "grid",
-    headStyles: { fillColor: COLORS.primary, textColor: COLORS.white, fontSize: 7, fontStyle: "bold" },
-    bodyStyles: { fontSize: 7, textColor: COLORS.text },
-    alternateRowStyles: { fillColor: COLORS.bg },
-    margin: { left: MARGIN, right: MARGIN },
-    didParseCell: (data) => {
-      if (data.section === "body" && data.column.index === 4) {
-        const label = factorData[data.row.index]?.cls.label;
-        if (label === "Risco Alto") data.cell.styles.textColor = COLORS.danger;
-        else if (label === "Risco Médio") data.cell.styles.textColor = COLORS.warning;
-        else data.cell.styles.textColor = COLORS.success;
-        data.cell.styles.fontStyle = "bold";
-      }
-    },
-  });
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...COLORS.text);
+  doc.text("Classificacao dos Fatores por Setor", MARGIN, y);
+  y += 4;
+
+  // Build sector list from respondents (only sectorList with at least one response)
+  const sectorListSet = new Set<string>();
+  pool.forEach((r: any) => { if (r.sector) sectorListSet.add(r.sector); });
+  const sectorList = Array.from(sectorListSet).sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  if (sectorList.length === 0) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...COLORS.muted);
+    doc.text("Nenhum setor identificado nas respostas.", MARGIN, y + 4);
+    y += 10;
+  } else {
+    // Per-sector, per-factor average
+    const sectorFactorAvg = (sector: string, f: typeof ALL_FACTORS[number]): number => {
+      const sectorPool = pool.filter((r: any) => r.sector === sector);
+      const vals: number[] = [];
+      sectorPool.forEach((r: any) => {
+        f.questionIds.forEach((qId: string) => {
+          const v = r.answers[qId];
+          if (typeof v === "number") vals.push(v);
+        });
+      });
+      if (vals.length === 0) return 0;
+      return vals.reduce((a, b) => a + b, 0) / vals.length;
+    };
+
+    // Build two header rows: scales (with colSpan) + factors
+    const scaleHeaderRow: any[] = [{ content: "Setor", rowSpan: 2, styles: { halign: "center", valign: "middle", fillColor: COLORS.primary, textColor: COLORS.white } }];
+    PROART_SCALES.forEach(s => {
+      scaleHeaderRow.push({
+        content: removeDiacritics(`${s.shortName} - ${s.name.replace(/\s*\([^)]*\)\s*$/, "")}`),
+        colSpan: s.factors.length,
+        styles: { halign: "center", fillColor: COLORS.primary, textColor: COLORS.white },
+      });
+    });
+    const factorHeaderRow: any[] = ALL_FACTORS.map(f => ({
+      content: removeDiacritics(f.name),
+      styles: {
+        halign: "center",
+        fillColor: f.type === "positive" ? [220, 235, 245] as [number, number, number] : [245, 230, 230] as [number, number, number],
+        textColor: COLORS.text,
+        fontStyle: "bold" as const,
+      },
+    }));
+
+    // Body: each row = one sector, cells = "avg\nLabel" colored by risk
+    type CellMeta = { value: number; label: string; bg: [number, number, number]; hasData: boolean };
+    const matrix: CellMeta[][] = sectorList.map(sec =>
+      ALL_FACTORS.map(f => {
+        const avg = sectorFactorAvg(sec, f);
+        if (avg === 0) return { value: 0, label: "-", bg: COLORS.lightBg, hasData: false };
+        const lvl = classifyRisk(avg, f.type);
+        const label = lvl === "low" ? "Baixo" : lvl === "medium" ? "Medio" : "Alto";
+        const bg: [number, number, number] =
+          lvl === "low" ? [200, 240, 200] :
+          lvl === "medium" ? [255, 240, 180] :
+          [250, 200, 200];
+        return { value: avg, label, bg, hasData: true };
+      })
+    );
+
+    const bodyRows = sectorList.map((sec, i) => [
+      { content: removeDiacritics(sec), styles: { fontStyle: "bold" as const, fillColor: COLORS.lightBg } },
+      ...matrix[i].map(c => ({
+        content: c.hasData ? `${c.value.toFixed(2)}\n${c.label}` : "-",
+      })),
+    ]);
+
+    autoTable(doc, {
+      startY: y,
+      head: [scaleHeaderRow, factorHeaderRow],
+      body: bodyRows,
+      theme: "grid",
+      styles: { fontSize: 6.5, cellPadding: 1.5, halign: "center", valign: "middle", lineColor: [180, 180, 180], lineWidth: 0.2 },
+      headStyles: { fontSize: 6.5, fontStyle: "bold" },
+      bodyStyles: { textColor: COLORS.text },
+      margin: { left: MARGIN, right: MARGIN },
+      tableWidth: CONTENT_WIDTH,
+      columnStyles: { 0: { halign: "left", cellWidth: 28 } },
+      didParseCell: (d) => {
+        if (d.section === "body" && d.column.index > 0) {
+          const cell = matrix[d.row.index]?.[d.column.index - 1];
+          if (cell) {
+            d.cell.styles.fillColor = cell.bg;
+            d.cell.styles.fontStyle = "bold";
+          }
+        }
+      },
+    });
+    y = (doc as any).lastAutoTable?.finalY + 6 || y + 40;
+
+    // Legend
+    y = checkPageBreak(doc, y, 10, company.name, "Legenda", pageNum);
+    const legendItems: { label: string; bg: [number, number, number] }[] = [
+      { label: "Baixo", bg: [200, 240, 200] },
+      { label: "Medio", bg: [255, 240, 180] },
+      { label: "Alto", bg: [250, 200, 200] },
+      { label: "Sem dados", bg: COLORS.lightBg },
+    ];
+    let lx = MARGIN;
+    legendItems.forEach(it => {
+      doc.setFillColor(...it.bg);
+      doc.rect(lx, y - 3, 4, 4, "F");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(...COLORS.text);
+      doc.text(it.label, lx + 6, y);
+      lx += 6 + doc.getTextWidth(it.label) + 6;
+    });
+    y += 6;
+  }
 
   // ==================== 3. P×S MATRIX ====================
   doc.addPage();
