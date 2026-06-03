@@ -311,6 +311,18 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
         },
       })),
     ];
+    const sectorHeaderRow: any[] = [
+      { content: "Setor", styles: { halign: "center", valign: "middle", fillColor: COLORS.primary, textColor: COLORS.white, fontStyle: "bold" as const } },
+      ...ALL_FACTORS.map(() => ({
+        content: "",
+        styles: {
+          halign: "center",
+          fillColor: COLORS.primary,
+          textColor: COLORS.white,
+          fontStyle: "bold" as const,
+        },
+      })),
+    ];
 
 
     // Body: each row = one sector, cells = "avg\nLabel" colored by risk
