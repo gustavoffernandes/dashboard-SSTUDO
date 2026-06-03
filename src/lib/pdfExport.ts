@@ -255,7 +255,7 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
     y += 4;
   });
 
-  // Classification of Factors by Sector — matrix table (scales × factors × sectors)
+  // Classification of Factors by Sector — matrix table (scales × factors × sectorList)
   y = checkPageBreak(doc, y, 40, company.name, "Classificacao dos Fatores por Setor", pageNum);
 
   doc.setFont("helvetica", "bold");
@@ -264,12 +264,12 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
   doc.text("Classificacao dos Fatores por Setor", MARGIN, y);
   y += 4;
 
-  // Build sector list from respondents (only sectors with at least one response)
+  // Build sector list from respondents (only sectorList with at least one response)
   const sectorListSet = new Set<string>();
   pool.forEach((r: any) => { if (r.sector) sectorListSet.add(r.sector); });
   const sectorList = Array.from(sectorListSet).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
-  if (sectors.length === 0) {
+  if (sectorList.length === 0) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(...COLORS.muted);
@@ -311,7 +311,7 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
 
     // Body: each row = one sector, cells = "avg\nLabel" colored by risk
     type CellMeta = { value: number; label: string; bg: [number, number, number]; hasData: boolean };
-    const matrix: CellMeta[][] = sectors.map(sec =>
+    const matrix: CellMeta[][] = sectorList.map(sec =>
       ALL_FACTORS.map(f => {
         const avg = sectorFactorAvg(sec, f);
         if (avg === 0) return { value: 0, label: "-", bg: COLORS.lightBg, hasData: false };
@@ -325,7 +325,7 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
       })
     );
 
-    const bodyRows = sectors.map((sec, i) => [
+    const bodyRows = sectorList.map((sec, i) => [
       { content: removeDiacritics(sec), styles: { fontStyle: "bold" as const, fillColor: COLORS.lightBg } },
       ...matrix[i].map(c => ({
         content: c.hasData ? `${c.value.toFixed(2)}\n${c.label}` : "-",
