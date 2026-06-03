@@ -350,7 +350,7 @@ export function exportCompanyPDF(companyId: string, data: PDFExportData, formNam
 
     autoTable(doc, {
       startY: y,
-      head: [scaleHeaderRow, factorHeaderRow],
+      head: [scaleHeaderRow, factorHeaderRow, sectorHeaderRow],
       body: bodyRows,
       theme: "grid",
       styles: { fontSize: 6.5, cellPadding: 1.5, halign: "center", valign: "middle", lineColor: [180, 180, 180], lineWidth: 0.2 },
