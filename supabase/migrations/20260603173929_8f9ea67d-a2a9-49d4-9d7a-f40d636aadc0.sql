@@ -1,0 +1,1 @@
+ALTER TABLE public.google_forms_config ADD COLUMN IF NOT EXISTS link_token TEXT;
