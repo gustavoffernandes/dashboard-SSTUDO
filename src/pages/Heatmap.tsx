@@ -10,7 +10,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Filter } from "lucide-react";
-import { ALL_FACTORS } from "@/lib/proartMethodology";
+import { ALL_FACTORS, PROART_SCALES } from "@/lib/proartMethodology";
+import { cn } from "@/lib/utils";
 
 export default function Heatmap() {
   const { isCompanyUser, userCompanyId } = useAuth();
@@ -19,7 +20,18 @@ export default function Heatmap() {
   const [selectedSector, setSelectedSector] = useState<string>("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  const [selectedScale, setSelectedScale] = useState<string>("all");
   const [selectedFactors, setSelectedFactors] = useState<string[]>(ALL_FACTORS.map(f => f.id));
+
+  const handleScaleChange = (scaleId: string) => {
+    setSelectedScale(scaleId);
+    if (scaleId === "all") {
+      setSelectedFactors(ALL_FACTORS.map(f => f.id));
+    } else {
+      const scale = PROART_SCALES.find(s => s.id === scaleId);
+      setSelectedFactors(scale ? scale.factors.map(f => f.id) : []);
+    }
+  };
   const { isLoading, hasData, companies, respondents, formConfigs, getAvailableQuestions, getFormConfigsForCompany } = useSurveyData();
 
   const relevantForms = isCompanyUser && userCompanyId
@@ -119,6 +131,26 @@ export default function Heatmap() {
             <h1 className="text-2xl font-bold text-foreground">Heatmap de Satisfação</h1>
             <p className="text-sm text-muted-foreground mt-1">Mapa de calor por fator PROART</p>
           </div>
+
+          {/* Scale tabs */}
+          <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-card p-1 w-fit">
+            {[{ id: "all", label: "Todas as escalas" }, ...PROART_SCALES.map(s => ({ id: s.id, label: s.shortName }))].map(opt => (
+              <button
+                key={opt.id}
+                onClick={() => handleScaleChange(opt.id)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-semibold rounded-md transition-colors",
+                  selectedScale === opt.id
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+                title={opt.id === "all" ? "Mostrar todos os fatores" : PROART_SCALES.find(s => s.id === opt.id)?.name}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
             <FactorFilter selected={selectedFactors} onChange={setSelectedFactors} />
             {!isCompanyUser && <MultiSelectCompanies companies={companies} selected={selectedCompanies} onChange={(ids) => { setSelectedCompanies(ids); setSelectedFormId(""); }} />}
@@ -138,6 +170,7 @@ export default function Heatmap() {
             )}
             <DateRangeFilter startDate={startDate} endDate={endDate} onStartChange={setStartDate} onEndChange={setEndDate} />
           </div>
+
 
           {selectedFactors.length === 0 ? (
             <p className="text-sm text-muted-foreground">Selecione pelo menos um fator para visualizar o heatmap.</p>
