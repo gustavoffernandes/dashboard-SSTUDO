@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FileText, Plus, Trash2, Loader2, CheckCircle2, XCircle, Copy, Eye, Edit2, Download, X, Link2, Lock, Shield, FileCheck } from "lucide-react";
+import { FileText, Plus, Trash2, Loader2, CheckCircle2, XCircle, Copy, Eye, Edit2, Download, X, Link2, Lock, Shield, FileCheck, RefreshCw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,14 +22,16 @@ interface FormConfig {
   is_active: boolean;
   created_at: string;
   sectors: any[];
+  link_token?: string | null;
 }
 
-function generateSurveyLink(formId: string, companyName?: string) {
+function generateSurveyLink(formId: string, companyName?: string, linkToken?: string | null) {
   const slug = companyName 
     ? companyName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
     : "";
   const shortId = formId.substring(0, 8);
-  return `${window.location.origin}/pesquisa/${shortId}${slug ? `-${slug}` : ""}/${formId}`;
+  const tokenPart = linkToken ? `-${linkToken}` : "";
+  return `${window.location.origin}/pesquisa/${shortId}${slug ? `-${slug}` : ""}${tokenPart}/${formId}`;
 }
 
 export default function Forms() {
@@ -162,8 +164,27 @@ export default function Forms() {
     },
   });
 
-  const copyLink = (id: string, companyName?: string) => {
-    navigator.clipboard.writeText(generateSurveyLink(id, companyName));
+  const refreshLink = useMutation({
+    mutationFn: async (config: FormConfig) => {
+      const newToken = Math.random().toString(36).substring(2, 10);
+      const { error } = await (supabase.from("google_forms_config") as any)
+        .update({ link_token: newToken })
+        .eq("id", config.id);
+      if (error) throw error;
+      return newToken;
+    },
+    onSuccess: (newToken, config) => {
+      queryClient.invalidateQueries({ queryKey: ["google-forms-config-all"] });
+      queryClient.invalidateQueries({ queryKey: ["google-forms-config"] });
+      const newLink = generateSurveyLink(config.id, config.company_name, newToken);
+      navigator.clipboard.writeText(newLink);
+      toast({ title: "Link atualizado e copiado!", description: "O link da pesquisa foi regenerado." });
+    },
+    onError: (e: Error) => toast({ title: "Erro ao atualizar link", description: e.message, variant: "destructive" }),
+  });
+
+  const copyLink = (id: string, companyName?: string, linkToken?: string | null) => {
+    navigator.clipboard.writeText(generateSurveyLink(id, companyName, linkToken));
     toast({ title: "Link copiado!" });
   };
 
@@ -349,9 +370,12 @@ export default function Forms() {
                 <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Link da Pesquisa</h4>
                 <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border border-border">
                   <Link2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-xs text-foreground truncate flex-1">{generateSurveyLink(editingId, registeredCompanies.find(c => c.id === formData.company_cnpj)?.name)}</span>
-                  <button onClick={() => copyLink(editingId, registeredCompanies.find(c => c.id === formData.company_cnpj)?.name)} className="flex items-center gap-1 px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors shrink-0">
+                  <span className="text-xs text-foreground truncate flex-1">{generateSurveyLink(editingId, registeredCompanies.find(c => c.id === formData.company_cnpj)?.name, configs.find(c => c.id === editingId)?.link_token)}</span>
+                  <button onClick={() => copyLink(editingId, registeredCompanies.find(c => c.id === formData.company_cnpj)?.name, configs.find(c => c.id === editingId)?.link_token)} className="flex items-center gap-1 px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors shrink-0">
                     <Copy className="h-3 w-3" /> Copiar Link
+                  </button>
+                  <button onClick={() => { const cfg = configs.find(c => c.id === editingId); if (cfg) refreshLink.mutate(cfg); }} disabled={refreshLink.isPending} className="flex items-center gap-1 px-3 py-1 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors shrink-0" title="Atualizar link">
+                    <RefreshCw className={cn("h-3 w-3", refreshLink.isPending && "animate-spin")} /> Refresh
                   </button>
                 </div>
               </div>
@@ -406,7 +430,8 @@ export default function Forms() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => copyLink(config.id, config.company_name)} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Copiar link"><Copy className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => copyLink(config.id, config.company_name, config.link_token)} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Copiar link"><Copy className="h-3.5 w-3.5" /></button>
+                            <button onClick={() => refreshLink.mutate(config)} disabled={refreshLink.isPending} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Atualizar link"><RefreshCw className={cn("h-3.5 w-3.5", refreshLink.isPending && "animate-spin")} /></button>
                             <button onClick={() => handleViewResponses(config.id)} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Ver respostas"><Eye className="h-3.5 w-3.5" /></button>
                             <button onClick={() => startEdit(config)} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Editar"><Edit2 className="h-3.5 w-3.5" /></button>
                             <button onClick={() => handleDownloadPDF(config)} className="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title="Gerar PDF"><Download className="h-3.5 w-3.5" /></button>
@@ -441,7 +466,8 @@ export default function Forms() {
                       <span className="font-medium text-foreground">{count} respostas</span>
                     </div>
                     <div className="flex items-center gap-1 pt-1 border-t border-border">
-                      <button onClick={() => copyLink(config.id, config.company_name)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Copy className="h-3 w-3" /> Copiar</button>
+                      <button onClick={() => copyLink(config.id, config.company_name, config.link_token)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Copy className="h-3 w-3" /> Copiar</button>
+                      <button onClick={() => refreshLink.mutate(config)} disabled={refreshLink.isPending} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><RefreshCw className={cn("h-3 w-3", refreshLink.isPending && "animate-spin")} /> Refresh</button>
                       <button onClick={() => handleViewResponses(config.id)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Eye className="h-3 w-3" /> Ver</button>
                       <button onClick={() => handleDownloadPDF(config)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Download className="h-3 w-3" /> PDF</button>
                       <button onClick={() => startEdit(config)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Edit2 className="h-3 w-3" /> Editar</button>
