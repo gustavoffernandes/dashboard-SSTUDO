@@ -310,7 +310,7 @@ export default function PublicSurvey() {
           <CheckCircle2 className="h-8 w-8" style={{ color: `hsl(${teal})` }} />
         </div>
         <h1 className="text-2xl font-bold mb-2 text-white">Obrigado!</h1>
-        <p className="text-sm mb-6 text-white/60">Suas respostas foram enviadas com sucesso. Agradecemos sua participação nesta pesquisa.</p>
+        <p className="text-sm mb-6 text-white/60">{previewMode ? "Pré-visualização concluída. Nenhuma resposta foi salva — este formulário está em rascunho." : "Suas respostas foram enviadas com sucesso. Agradecemos sua participação nesta pesquisa."}</p>
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium" style={{ background: `hsl(${teal} / 0.12)`, color: `hsl(${teal})` }}>
           <Shield className="h-3.5 w-3.5" /> Dados protegidos pela LGPD
         </div>
