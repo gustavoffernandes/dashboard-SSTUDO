@@ -64,7 +64,9 @@ export default function Forms() {
     },
   });
 
-  const configs = allConfigs.filter(c => c.spreadsheet_id !== "__placeholder__");
+  const configs = allConfigs
+    .filter(c => c.spreadsheet_id !== "__placeholder__")
+    .sort((a, b) => a.form_title?.localeCompare(b.form_title || "", "pt-BR") || a.company_name.localeCompare(b.company_name, "pt-BR"));
   const normalizeCity = (v: any) => (v || "").toString().trim().toLowerCase();
   const placeholderConfigs = allConfigs.filter((c: any) => c.spreadsheet_id === "__placeholder__");
   const registeredCompanies = placeholderConfigs.map((c: any) => {
