@@ -102,6 +102,10 @@ export function useSurveyData() {
     }
   });
 
+  // Sort companies and forms alphabetically (pt-BR) for consistent filter ordering
+  const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
+  formConfigs.sort((a, b) => collator.compare(a.title, b.title));
+
   const configIdToCompanyKey = new Map<string, string>();
   cnpjToConfigIds.forEach((configIds, key) => {
     configIds.forEach(configId => configIdToCompanyKey.set(configId, key));
