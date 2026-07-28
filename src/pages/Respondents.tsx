@@ -175,12 +175,12 @@ export default function Respondents() {
             <select value={filterForm} onChange={e => setFilterForm(e.target.value)}
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
               <option value="">Todos os formulários</option>
-              {formConfigs?.map(f => <option key={f.configId} value={f.configId}>{f.title}</option>)}
+              {[...(formConfigs || [])].sort((a, b) => a.title.localeCompare(b.title, "pt-BR")).map(f => <option key={f.configId} value={f.configId}>{f.title}</option>)}
             </select>
             <select value={filterCompany} onChange={e => setFilterCompany(e.target.value)}
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
               <option value="">Todas as empresas</option>
-              {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {[...companies].sort((a, b) => a.name.localeCompare(b.name, "pt-BR")).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
               className="rounded-lg border border-border bg-background px-3 py-2 text-sm">
