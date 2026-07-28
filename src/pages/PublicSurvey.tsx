@@ -187,7 +187,13 @@ export default function PublicSurvey() {
 
   const handleSubmit = async () => {
     if (answeredCount < totalQuestions) return;
+    if (previewMode) {
+      localStorage.removeItem(STORAGE_KEY_PREFIX + id);
+      setStep("submitted");
+      return;
+    }
     setSubmitting(true);
+
     try {
       const ageMap: Record<string, number> = { "18 a 25 anos": 21, "26 a 35 anos": 30, "36 a 45 anos": 40, "46 a 55 anos": 50, "Acima de 55 anos": 60 };
       const { error: err } = await supabase.from("survey_responses").insert([{
