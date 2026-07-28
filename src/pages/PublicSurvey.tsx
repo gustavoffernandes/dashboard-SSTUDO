@@ -68,6 +68,8 @@ export default function PublicSurvey() {
   const [submitting, setSubmitting] = useState(false);
   const [sectors, setSectors] = useState<SectorWithRoles[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
+
 
   const scales = useMemo(() => getQuestionsByScale(), []);
   const totalQuestions = PROART_QUESTIONS.length;
@@ -84,10 +86,14 @@ export default function PublicSurvey() {
         .maybeSingle();
       if (err || !data) { setError("Pesquisa não encontrada"); setLoading(false); return; }
       const cfg = data as any as FormConfig;
-      if (!cfg.is_active) { setError("Esta pesquisa não está mais ativa. Status atual: " + ((data as any).form_status === "pausada" ? "Pausada" : (data as any).form_status === "rascunho" ? "Rascunho" : "Encerrada")); setLoading(false); return; }
-      if (cfg.end_date && new Date(cfg.end_date) < new Date()) { setError("O prazo desta pesquisa encerrou"); setLoading(false); return; }
-      if (cfg.start_date && new Date(cfg.start_date) > new Date()) { setError("Esta pesquisa ainda não começou"); setLoading(false); return; }
+      const status = (data as any).form_status;
+      const isDraft = status === "rascunho";
+      if (!cfg.is_active && !isDraft) { setError("Esta pesquisa não está mais ativa. Status atual: " + (status === "pausada" ? "Pausada" : "Encerrada")); setLoading(false); return; }
+      if (!isDraft && cfg.end_date && new Date(cfg.end_date) < new Date()) { setError("O prazo desta pesquisa encerrou"); setLoading(false); return; }
+      if (!isDraft && cfg.start_date && new Date(cfg.start_date) > new Date()) { setError("Esta pesquisa ainda não começou"); setLoading(false); return; }
+      setPreviewMode(isDraft);
       setConfig(cfg);
+
 
       let configSectors: SectorWithRoles[] = [];
       const extractSectors = (sectorsData: any): SectorWithRoles[] => {
@@ -114,36 +120,44 @@ export default function PublicSurvey() {
           configSectors = extractSectors((placeholder as any).sectors);
         }
       }
-      // Dedupe by name
+      // Dedupe by name + ordenação alfabética (setores e funções)
       const seen = new Set<string>();
-      setSectors(configSectors.filter(s => { if (seen.has(s.name)) return false; seen.add(s.name); return true; }));
+      const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
+      const uniqueSectors = configSectors
+        .filter(s => { if (seen.has(s.name)) return false; seen.add(s.name); return true; })
+        .map(s => ({ ...s, roles: [...new Set(s.roles || [])].sort(collator.compare) }))
+        .sort((a, b) => collator.compare(a.name, b.name));
+      setSectors(uniqueSectors);
 
-      const sessionToken = localStorage.getItem(STORAGE_KEY_PREFIX + id + "_token") || crypto.randomUUID();
-      localStorage.setItem(STORAGE_KEY_PREFIX + id + "_token", sessionToken);
+      if (!isDraft) {
+        const sessionToken = localStorage.getItem(STORAGE_KEY_PREFIX + id + "_token") || crypto.randomUUID();
+        localStorage.setItem(STORAGE_KEY_PREFIX + id + "_token", sessionToken);
 
-      const { data: existingSession } = await (supabase.from("survey_sessions") as any)
-        .select("id, status")
-        .eq("config_id", id)
-        .eq("session_token", sessionToken)
-        .maybeSingle();
+        const { data: existingSession } = await (supabase.from("survey_sessions") as any)
+          .select("id, status")
+          .eq("config_id", id)
+          .eq("session_token", sessionToken)
+          .maybeSingle();
 
-      if (existingSession) {
-        if (existingSession.status === "completed") {
-          setError("Você já respondeu esta pesquisa");
-          setLoading(false);
-          return;
+        if (existingSession) {
+          if (existingSession.status === "completed") {
+            setError("Você já respondeu esta pesquisa");
+            setLoading(false);
+            return;
+          }
+          setSessionId(existingSession.id);
+          await (supabase.from("survey_sessions") as any)
+            .update({ last_activity_at: new Date().toISOString() })
+            .eq("id", existingSession.id);
+        } else {
+          const { data: newSession } = await (supabase.from("survey_sessions") as any)
+            .insert([{ config_id: id, session_token: sessionToken, status: "in_progress" }])
+            .select("id")
+            .single();
+          if (newSession) setSessionId(newSession.id);
         }
-        setSessionId(existingSession.id);
-        await (supabase.from("survey_sessions") as any)
-          .update({ last_activity_at: new Date().toISOString() })
-          .eq("id", existingSession.id);
-      } else {
-        const { data: newSession } = await (supabase.from("survey_sessions") as any)
-          .insert([{ config_id: id, session_token: sessionToken, status: "in_progress" }])
-          .select("id")
-          .single();
-        if (newSession) setSessionId(newSession.id);
       }
+
 
       try {
         const saved = localStorage.getItem(STORAGE_KEY_PREFIX + id);
@@ -173,7 +187,13 @@ export default function PublicSurvey() {
 
   const handleSubmit = async () => {
     if (answeredCount < totalQuestions) return;
+    if (previewMode) {
+      localStorage.removeItem(STORAGE_KEY_PREFIX + id);
+      setStep("submitted");
+      return;
+    }
     setSubmitting(true);
+
     try {
       const ageMap: Record<string, number> = { "18 a 25 anos": 21, "26 a 35 anos": 30, "36 a 45 anos": 40, "46 a 55 anos": 50, "Acima de 55 anos": 60 };
       const { error: err } = await supabase.from("survey_responses").insert([{
@@ -290,7 +310,7 @@ export default function PublicSurvey() {
           <CheckCircle2 className="h-8 w-8" style={{ color: `hsl(${teal})` }} />
         </div>
         <h1 className="text-2xl font-bold mb-2 text-white">Obrigado!</h1>
-        <p className="text-sm mb-6 text-white/60">Suas respostas foram enviadas com sucesso. Agradecemos sua participação nesta pesquisa.</p>
+        <p className="text-sm mb-6 text-white/60">{previewMode ? "Pré-visualização concluída. Nenhuma resposta foi salva — este formulário está em rascunho." : "Suas respostas foram enviadas com sucesso. Agradecemos sua participação nesta pesquisa."}</p>
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium" style={{ background: `hsl(${teal} / 0.12)`, color: `hsl(${teal})` }}>
           <Shield className="h-3.5 w-3.5" /> Dados protegidos pela LGPD
         </div>
@@ -337,6 +357,17 @@ export default function PublicSurvey() {
           </div>
         </div>
       </header>
+
+      {previewMode && (
+        <div className="border-b" style={{ background: 'hsl(38 92% 55% / 0.15)', borderColor: 'hsl(38 92% 55% / 0.3)' }}>
+          <div className="max-w-3xl mx-auto px-4 py-2 flex items-center gap-2 text-xs font-semibold" style={{ color: 'hsl(38 92% 70%)' }}>
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            Modo pré-visualização (rascunho) — nada será salvo e este acesso não conta como respondente.
+          </div>
+        </div>
+      )}
+
+
 
       {/* Step indicator */}
       {step !== "welcome" && (
