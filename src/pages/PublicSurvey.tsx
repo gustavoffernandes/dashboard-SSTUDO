@@ -120,36 +120,44 @@ export default function PublicSurvey() {
           configSectors = extractSectors((placeholder as any).sectors);
         }
       }
-      // Dedupe by name
+      // Dedupe by name + ordenação alfabética (setores e funções)
       const seen = new Set<string>();
-      setSectors(configSectors.filter(s => { if (seen.has(s.name)) return false; seen.add(s.name); return true; }));
+      const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
+      const uniqueSectors = configSectors
+        .filter(s => { if (seen.has(s.name)) return false; seen.add(s.name); return true; })
+        .map(s => ({ ...s, roles: [...new Set(s.roles || [])].sort(collator.compare) }))
+        .sort((a, b) => collator.compare(a.name, b.name));
+      setSectors(uniqueSectors);
 
-      const sessionToken = localStorage.getItem(STORAGE_KEY_PREFIX + id + "_token") || crypto.randomUUID();
-      localStorage.setItem(STORAGE_KEY_PREFIX + id + "_token", sessionToken);
+      if (!isDraft) {
+        const sessionToken = localStorage.getItem(STORAGE_KEY_PREFIX + id + "_token") || crypto.randomUUID();
+        localStorage.setItem(STORAGE_KEY_PREFIX + id + "_token", sessionToken);
 
-      const { data: existingSession } = await (supabase.from("survey_sessions") as any)
-        .select("id, status")
-        .eq("config_id", id)
-        .eq("session_token", sessionToken)
-        .maybeSingle();
+        const { data: existingSession } = await (supabase.from("survey_sessions") as any)
+          .select("id, status")
+          .eq("config_id", id)
+          .eq("session_token", sessionToken)
+          .maybeSingle();
 
-      if (existingSession) {
-        if (existingSession.status === "completed") {
-          setError("Você já respondeu esta pesquisa");
-          setLoading(false);
-          return;
+        if (existingSession) {
+          if (existingSession.status === "completed") {
+            setError("Você já respondeu esta pesquisa");
+            setLoading(false);
+            return;
+          }
+          setSessionId(existingSession.id);
+          await (supabase.from("survey_sessions") as any)
+            .update({ last_activity_at: new Date().toISOString() })
+            .eq("id", existingSession.id);
+        } else {
+          const { data: newSession } = await (supabase.from("survey_sessions") as any)
+            .insert([{ config_id: id, session_token: sessionToken, status: "in_progress" }])
+            .select("id")
+            .single();
+          if (newSession) setSessionId(newSession.id);
         }
-        setSessionId(existingSession.id);
-        await (supabase.from("survey_sessions") as any)
-          .update({ last_activity_at: new Date().toISOString() })
-          .eq("id", existingSession.id);
-      } else {
-        const { data: newSession } = await (supabase.from("survey_sessions") as any)
-          .insert([{ config_id: id, session_token: sessionToken, status: "in_progress" }])
-          .select("id")
-          .single();
-        if (newSession) setSessionId(newSession.id);
       }
+
 
       try {
         const saved = localStorage.getItem(STORAGE_KEY_PREFIX + id);
