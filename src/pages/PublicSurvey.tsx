@@ -358,6 +358,17 @@ export default function PublicSurvey() {
         </div>
       </header>
 
+      {previewMode && (
+        <div className="border-b" style={{ background: 'hsl(38 92% 55% / 0.15)', borderColor: 'hsl(38 92% 55% / 0.3)' }}>
+          <div className="max-w-3xl mx-auto px-4 py-2 flex items-center gap-2 text-xs font-semibold" style={{ color: 'hsl(38 92% 70%)' }}>
+            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            Modo pré-visualização (rascunho) — nada será salvo e este acesso não conta como respondente.
+          </div>
+        </div>
+      )}
+
+
+
       {/* Step indicator */}
       {step !== "welcome" && (
         <div className="sticky top-0 z-40 border-b" style={{ borderColor: `hsl(${slate} / 0.1)`, background: `hsl(${navy} / 0.95)`, backdropFilter: 'blur(12px)' }}>
