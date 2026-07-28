@@ -136,7 +136,6 @@ export function useSurveyData() {
         sector: info.sector,
         employees: info.employees || responseCount,
         color: COMPANY_COLORS[i % COMPANY_COLORS.length],
-        cnpj: info.cnpj,
       };
     })
     .filter((c): c is RealCompany => c !== null)
