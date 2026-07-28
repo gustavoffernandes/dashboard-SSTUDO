@@ -102,6 +102,10 @@ export function useSurveyData() {
     }
   });
 
+  // Sort companies and forms alphabetically (pt-BR) for consistent filter ordering
+  const collator = new Intl.Collator("pt-BR", { sensitivity: "base" });
+  formConfigs.sort((a, b) => collator.compare(a.title, b.title));
+
   const configIdToCompanyKey = new Map<string, string>();
   cnpjToConfigIds.forEach((configIds, key) => {
     configIds.forEach(configId => configIdToCompanyKey.set(configId, key));
@@ -134,7 +138,8 @@ export function useSurveyData() {
         color: COMPANY_COLORS[i % COMPANY_COLORS.length],
       };
     })
-    .filter((c): c is RealCompany => c !== null);
+    .filter((c): c is RealCompany => c !== null)
+    .sort((a, b) => collator.compare(a.name, b.name));
 
   const respondents: Respondent[] = filteredRawResponses.map(r => {
     const formattedAnswers: Record<string, number> = {};
