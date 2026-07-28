@@ -92,9 +92,12 @@ export default function OpenResponses() {
               className="rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="">Todos os formulários</option>
-              {formConfigs.map(fc => (
-                <option key={fc.configId} value={fc.configId}>{fc.title}</option>
-              ))}
+              {formConfigs
+                .slice()
+                .sort((a, b) => a.title.localeCompare(b.title, "pt-BR"))
+                .map(fc => (
+                  <option key={fc.configId} value={fc.configId}>{fc.title}</option>
+                ))}
             </select>
           </div>
         )}
