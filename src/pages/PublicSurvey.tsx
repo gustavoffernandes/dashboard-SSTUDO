@@ -68,6 +68,8 @@ export default function PublicSurvey() {
   const [submitting, setSubmitting] = useState(false);
   const [sectors, setSectors] = useState<SectorWithRoles[]>([]);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
+
 
   const scales = useMemo(() => getQuestionsByScale(), []);
   const totalQuestions = PROART_QUESTIONS.length;
