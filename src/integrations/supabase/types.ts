@@ -232,6 +232,7 @@ export type Database = {
           is_anonymous: boolean | null
           last_sync_at: string | null
           link_token: string | null
+          methodology: string
           owner_admin_id: string | null
           require_consent: boolean | null
           require_password: boolean | null
@@ -266,6 +267,7 @@ export type Database = {
           is_anonymous?: boolean | null
           last_sync_at?: string | null
           link_token?: string | null
+          methodology?: string
           owner_admin_id?: string | null
           require_consent?: boolean | null
           require_password?: boolean | null
@@ -300,6 +302,7 @@ export type Database = {
           is_anonymous?: boolean | null
           last_sync_at?: string | null
           link_token?: string | null
+          methodology?: string
           owner_admin_id?: string | null
           require_consent?: boolean | null
           require_password?: boolean | null
