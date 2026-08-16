@@ -1,53 +1,71 @@
-## Ajustes no Heatmap
+# Adicionar metodologia COPSOQ II-Br ao sistema
 
-### 1. Remover filtro das 4 escalas (EOT, EEG, EIST, EDT)
+Hoje o sistema é 100% PROART: 91 questões, 4 escalas, 10 fatores, escala Likert 1-5 e faixas de risco fixas. O objetivo é manter tudo isso funcionando e adicionar o COPSOQ II-Br (versão curta) como segunda metodologia, escolhida por empresa.
 
-Em `src/pages/Heatmap.tsx`, remover os botões de seções (atualmente: "Todos", "EOT", "EEG", "EIST", "EDT") e toda a lógica de `activeSection` / `getAvailableSections()` / renderização condicional por seção.
+## Como a metodologia é definida
 
-### 2. Adicionar filtro multi-seleção dos 10 fatores PROART
+- No cadastro da empresa/filial passa a existir o campo **Metodologia**: PROART (padrão) ou COPSOQ II-Br.
+- Ao criar um formulário, a metodologia vem automaticamente da empresa e fica **travada** (exibida como selo, não editável).
+- Empresas já cadastradas continuam como PROART, sem qualquer mudança de comportamento.
+- Trocar a metodologia de uma empresa que já tem respostas fica bloqueado, com aviso explicando o motivo (as respostas antigas não são comparáveis).
 
-Os 10 fatores já existem em `src/lib/proartMethodology.ts` (`ALL_FACTORS`):
+## O questionário COPSOQ II-Br
 
-- **EOT**: Divisão das Tarefas (c1–c7), Divisão Social do Trabalho (c8–c19)
-- **EEG**: Estilo Individualista (g1–g11, negativo), Estilo Coletivista (g12–g21, positivo)
-- **EIST**: Falta de Sentido (v1–v9), Esgotamento Mental (v10–v17), Falta de Reconhecimento (v18–v28)
-- **EDT**: Danos Psicológicos (s1–s7), Danos Sociais (s8–s14), Danos Físicos (s15–s23)
+40 questões em 23 dimensões, agrupadas em 7 domínios:
 
-Adicionar um novo componente `FactorFilter` (ou reaproveitar o padrão visual de `MultiSelectCompanies`) que liste os 10 fatores agrupados visualmente pela escala de origem, permitindo selecionar um ou mais. Padrão inicial: todos selecionados.
+```text
+Demandas no trabalho ......... Demandas quantitativas, Ritmo, Demandas emocionais
+Organização e conteúdo ....... Influência, Possibilidade de desenvolvimento,
+                               Significado, Comprometimento
+Relações interpessoais ....... Previsibilidade, Reconhecimento, Clareza do papel,
+                               Qualidade da liderança, Suporte social
+Interface trabalho-indivíduo . Satisfação no trabalho, Conflitos trabalho-família
+Valores do local de trabalho . Confiança na gestão, Justiça
+Saúde e bem-estar ............ Saúde geral, Burnout, Estresse
+Comportamentos ofensivos ..... Atenção sexual indesejada, Ameaças de violência,
+                               Violência física, Bullying
+```
 
-### 3. Exibir o fator de cada pergunta na tabela
+O formulário público muda conforme a metodologia:
+- Escala de resposta 0-4 com rótulos diferentes por bloco de questões (sempre/nunca, em grande parte/muito pouco, muito satisfeito/muito insatisfeito, excelente/ruim, sim com certeza/não).
+- A questão 1B tem pontuação invertida.
+- As questões 20-23 usam resposta de frequência (diariamente até não) e, quando positivas, abrem a seleção de quem pratica o comportamento (colegas, gerente, subordinados, clientes).
+- Navegação por domínio, barra de progresso, revisão final e todas as etapas demográficas continuam iguais.
 
-Em `src/components/dashboard/HeatmapTable.tsx`:
+## Cálculo e classificação
 
-- Adicionar uma nova coluna **"Fator"** logo após a coluna "Pergunta" (também sticky à esquerda).
-- Mapear cada `question.id` para o fator correspondente via `ALL_FACTORS` (criar helper `getFactorByQuestionId(id)`).
-- Mostrar `factor.shortName` com badge sutil, e tooltip com o nome completo.
-- Quando várias perguntas seguidas pertencerem ao mesmo fator, usar `rowSpan` para agrupar visualmente (ex.: c1–c7 mostra "Divisão das Tarefas" uma única vez com rowSpan=7).
+Cada dimensão é a **soma** dos seus itens, com faixas próprias definidas no artigo. Exemplos:
 
-### 4. Renderização da tabela única filtrada por fatores
+| Dimensão | Pontuação | Seguro | Atenção | Risco |
+|---|---|---|---|---|
+| Demandas quantitativas | 0-8 | 0-3 | 4 | 5-8 |
+| Ritmo de trabalho | 0-8 | 0-3 | 4-5 | 6-8 |
+| Influência no trabalho | 0-8 | 5-8 | 4 | 0-3 |
+| Clareza do papel | 0-8 | 6-8 | 4-5 | 0-3 |
+| Satisfação no trabalho | 0-3 | 2-3 | — | 0-1 |
+| Conflitos trabalho-família | 0-6 | 0-2 | 3 | 4-6 |
+| Saúde geral | 0-4 | 3-4 | 2 | 0-1 |
+| Burnout / Estresse | 0-8 | 0-2 | 3 | 4-8 |
 
-Com fatores selecionados, montar a lista de perguntas exibidas pela união dos `questionIds` dos fatores escolhidos (ordenadas pelo `number` global). A tabela passa a ser única (não mais segmentada por seção).
+Cada uma das 19 dimensões pontuáveis tem sua faixa própria cadastrada. Cores em semáforo: seguro verde, atenção amarelo, risco vermelho. Comportamentos ofensivos não recebem classificação.
 
-### 5. Classificação de risco por fator (correção importante)
+## O que muda em cada tela
 
-Hoje o heatmap usa `isNegativeSection` por seção inteira, o que está incorreto para EEG (mista: Individualista é negativa, Coletivista é positiva). A classificação passará a ser **por fator**, usando `factor.type` de `ALL_FACTORS`:
+**Heatmap** — quando a empresa é COPSOQ, o filtro de escalas passa a listar os 7 domínios e o filtro de fatores lista as 23 dimensões. A célula mostra a **pontuação média da dimensão** (ex.: 5,2 de 8) com a cor da faixa correspondente. Colunas por setor como já é hoje.
 
-- **Fatores positivos** (Divisão das Tarefas, Divisão Social, Coletivista): ≥3,70 BAIXO 🟢 · 2,30–3,69 MÉDIO 🟡 · <2,30 ALTO 🔴
-- **Fatores negativos** (Individualista, todos os EIST, todos os EDT): ≤2,29 BAIXO 🟢 · 2,30–3,69 MÉDIO 🟡 · ≥3,70 ALTO 🔴
+**Relatórios PDF** — a matriz hierárquica passa a ser Domínio > Dimensão > Setor, com a pontuação média e o rótulo seguro/atenção/risco. A legenda de classificação é substituída pela do COPSOQ.
 
-Isso já está alinhado ao `classifyRisk()` em `proartMethodology.ts` — passaremos a usá-lo no heatmap em vez da função local `getRisk`, garantindo coerência entre Heatmap, PDF e demais telas.
+**Planos de ação** — a matriz P×S continua, alimentada pelas dimensões COPSOQ: exposição vem das dimensões de demandas e saúde (burnout, estresse), controle vem de influência, previsibilidade, suporte e liderança, gravidade vem de saúde geral e burnout. Os níveis PR1-PR4 e prazos permanecem idênticos. Um banco de ações sugeridas específico para as dimensões COPSOQ será criado, no mesmo formato atual (título, por quê, como).
 
-A legenda do heatmap passa a mostrar as duas faixas (positivas e negativas) explicitamente, já que a tabela pode misturar fatores dos dois tipos.
+**Comportamentos ofensivos** — painel próprio na análise, com contagem e frequência de cada tipo e o percentual por autor do comportamento, sem classificação de risco e com texto orientando sobre acolhimento e canais de denúncia.
 
-### 6. Verificação dos cálculos PROART
+**Análise, Respondentes, Evolução temporal, Comparação entre empresas** — passam a ler a metodologia do formulário e renderizar os domínios/dimensões corretos. A comparação entre empresas só permite comparar formulários da mesma metodologia.
 
-A média por pergunta continua sendo média simples das respostas (escala Likert 1–5), arredondada a 2 casas — coerente com o método. As perguntas invertidas (`INVERTED_QUESTION_IDS`) já são tratadas no momento da ingestão das respostas (em `useSurveyData`), portanto o valor que chega ao heatmap já está orientado corretamente. Os limiares 1,00–2,29 / 2,30–3,69 / 3,70–5,00 são exatamente os definidos pelo manual PROART de Facas — confirmados.
+## Detalhes técnicos
 
-### Arquivos a alterar
-
-- `src/pages/Heatmap.tsx` — remover botões de seção, adicionar `FactorFilter`, simplificar renderização.
-- `src/components/dashboard/HeatmapTable.tsx` — coluna "Fator" com rowSpan, classificação por fator, legenda dupla.
-- `src/components/dashboard/FactorFilter.tsx` *(novo)* — multi-select agrupado por escala.
-- `src/lib/proartMethodology.ts` — adicionar helper `getFactorByQuestionId(id)` (export utilitário).
-
-Sem alterações em backend, RLS ou outras telas (Reports/PDF já usam `classifyRisk` corretamente).
+- Migração: coluna `methodology` em `google_forms_config` (texto, padrão `proart`), aplicada tanto ao registro placeholder da empresa quanto aos formulários.
+- Novos arquivos `src/lib/copsoqQuestions.ts` (40 itens, blocos de resposta, inversão do 1B) e `src/lib/copsoqMethodology.ts` (domínios, dimensões, faixas por dimensão, classificação, P×S, ações sugeridas).
+- Novo `src/lib/methodology.ts` como camada de resolução: recebe a metodologia do formulário e devolve escalas/fatores/questões/classificador, para que Heatmap, Reports, pdfExport, SurveyAnalysis e ActionPlans não façam import direto do PROART.
+- `useSurveyData.ts` passa a expor `methodology` por config e por empresa.
+- `PublicSurvey.tsx` monta os passos a partir da metodologia resolvida; respostas continuam gravadas em `survey_responses.answers` com os ids das questões COPSOQ.
+- Nenhuma alteração no comportamento atual de formulários PROART existentes.
