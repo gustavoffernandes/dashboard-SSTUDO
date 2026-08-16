@@ -63,7 +63,7 @@ Cada uma das 19 dimensões pontuáveis tem sua faixa própria cadastrada. Cores 
 
 ## Detalhes técnicos
 
-- Migração: coluna `methodology` em `google_forms_config` (texto, padrão `proart`), aplicada tanto ao registro placeholder da empresa quanto aos formulários.
+- Migração: coluna `methodology` (texto, padrão `proart`) na tabela de configuração de empresas/formulários — hoje ainda chamada `google_forms_config` por herança, já que o formulário é do próprio sistema —, aplicada tanto ao registro da empresa quanto aos formulários.
 - Novos arquivos `src/lib/copsoqQuestions.ts` (40 itens, blocos de resposta, inversão do 1B) e `src/lib/copsoqMethodology.ts` (domínios, dimensões, faixas por dimensão, classificação, P×S, ações sugeridas).
 - Novo `src/lib/methodology.ts` como camada de resolução: recebe a metodologia do formulário e devolve escalas/fatores/questões/classificador, para que Heatmap, Reports, pdfExport, SurveyAnalysis e ActionPlans não façam import direto do PROART.
 - `useSurveyData.ts` passa a expor `methodology` por config e por empresa.
