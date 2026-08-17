@@ -50,17 +50,18 @@ export default function Companies() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    company_name: "", cnpj: "", sector: "", employee_count: "",
+    company_name: "", cnpj: "", sector: "", employee_count: "", methodology: "proart",
     contact_name: "", contact_email: "", contact_phone: "",
     address_street: "", address_city: "", address_state: "", address_zip: "",
   });
   const [formSectors, setFormSectors] = useState<CompanySector[]>([]);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editData, setEditData] = useState({
-    name: "", cnpj: "", sector: "", employee_count: "",
+    name: "", cnpj: "", sector: "", employee_count: "", methodology: "proart",
     contact_name: "", contact_email: "", contact_phone: "",
     address_street: "", address_city: "", address_state: "", address_zip: "",
   });
+
   const [editSectors, setEditSectors] = useState<CompanySector[]>([]);
   const [newSector, setNewSector] = useState<CompanySector>({ name: "", code: "", description: "", roles: [] });
   const [editingSectorIdx, setEditingSectorIdx] = useState<number | null>(null);
