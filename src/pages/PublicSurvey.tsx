@@ -271,7 +271,7 @@ export default function PublicSurvey() {
     const s: Step[] = ["welcome"];
     if (config?.require_consent) s.push("consent");
     if (config?.require_password) s.push("password");
-    s.push("demographics", "scale-0", "scale-1", "scale-2", "scale-3", "open", "review");
+    s.push("demographics", ...blocks.map((_, i) => `scale-${i}`), "open", "review");
     return s;
   };
 
@@ -281,8 +281,9 @@ export default function PublicSurvey() {
     if (step === "demographics") return !!(demographics.sex && demographics.age && demographics.escolaridade && demographics.tempo_empresa && demographics.sector);
     if (step.startsWith("scale-")) {
       const scaleIdx = parseInt(step.split("-")[1]);
-      const scale = scales[scaleIdx];
-      return scale.questions.every(q => answers[q.id] !== undefined);
+      const block = blocks[scaleIdx];
+      if (!block) return true;
+      return block.questions.every(q => answers[q.id] !== undefined);
     }
     return true;
   };
