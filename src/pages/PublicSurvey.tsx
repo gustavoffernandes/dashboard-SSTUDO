@@ -338,12 +338,9 @@ export default function PublicSurvey() {
     consent: "Consentimento",
     password: "Senha",
     demographics: "Seus Dados",
-    "scale-0": scales[0]?.name || "Escala 1",
-    "scale-1": scales[1]?.name || "Escala 2",
-    "scale-2": scales[2]?.name || "Escala 3",
-    "scale-3": scales[3]?.name || "Escala 4",
     open: "Percepção",
     review: "Revisão",
+    ...Object.fromEntries(blocks.map((b, i) => [`scale-${i}`, b.shortName || b.name])),
   };
 
   return (
