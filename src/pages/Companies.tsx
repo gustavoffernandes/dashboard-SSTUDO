@@ -13,6 +13,7 @@ interface CompanyEntry {
   address_city: string;
   sector: string;
   employee_count: number | null;
+  methodology: string;
   form_count: number;
   sectors: CompanySector[];
   has_branches: boolean;
