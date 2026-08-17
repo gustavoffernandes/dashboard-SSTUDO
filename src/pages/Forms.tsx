@@ -77,8 +77,10 @@ export default function Forms() {
       cnpj: c.cnpj || "",
       name: c.company_name || "Empresa sem nome",
       city,
+      methodology: normalizeMethodology(c.methodology),
       label: city ? `${c.company_name} — ${city}` : c.company_name,
     };
+
   }).sort((a, b) => a.label.localeCompare(b.label));
 
   const { data: responseCounts = {} } = useQuery({
