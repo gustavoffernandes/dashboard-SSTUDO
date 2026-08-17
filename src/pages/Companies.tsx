@@ -626,7 +626,11 @@ export default function Companies() {
                           {company.has_branches && (
                             <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary uppercase tracking-wider">Filial</span>
                           )}
+                          <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground uppercase tracking-wider">
+                            {methodologyLabel(normalizeMethodology(company.methodology))}
+                          </span>
                         </div>
+
                         <p className="text-xs text-muted-foreground">CNPJ: {formatCNPJ(company.cnpj)}</p>
                         {company.sector && <p className="text-xs text-muted-foreground">Setor: {company.sector}</p>}
                         {company.employee_count && <p className="text-xs text-muted-foreground">Funcionários: {company.employee_count}</p>}
