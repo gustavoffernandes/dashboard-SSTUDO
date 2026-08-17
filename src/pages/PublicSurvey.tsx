@@ -2,11 +2,16 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { PROART_QUESTIONS, OPEN_QUESTIONS, LIKERT_OPTIONS, DEMOGRAPHIC_OPTIONS, getQuestionsByScale } from "@/lib/proartQuestions";
+import { DEMOGRAPHIC_OPTIONS } from "@/lib/proartQuestions";
+import { COPSOQ_PERPETRATORS } from "@/lib/copsoqQuestions";
+import {
+  normalizeMethodology, getSurveyBlocks, getTotalQuestions, getOpenQuestions,
+  getMethodologyMeta, type Methodology, type ResolvedOption, type ResolvedQuestion,
+} from "@/lib/methodology";
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, FileText, Loader2, Lock, Save, Shield, AlertCircle, User, Briefcase, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Step = "welcome" | "consent" | "password" | "demographics" | "scale-0" | "scale-1" | "scale-2" | "scale-3" | "open" | "review" | "submitted";
+type Step = string;
 
 interface FormConfig {
   id: string;
