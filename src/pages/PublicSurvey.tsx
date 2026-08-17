@@ -76,9 +76,14 @@ export default function PublicSurvey() {
   const [previewMode, setPreviewMode] = useState(false);
 
 
-  const scales = useMemo(() => getQuestionsByScale(), []);
-  const totalQuestions = PROART_QUESTIONS.length;
-  const answeredCount = Object.keys(answers).length;
+  const [perpetrators, setPerpetrators] = useState<Record<string, string[]>>({});
+
+  const methodology: Methodology = normalizeMethodology((config as any)?.methodology);
+  const meta = getMethodologyMeta(methodology);
+  const blocks = useMemo(() => getSurveyBlocks(methodology), [methodology]);
+  const openQuestions = useMemo(() => getOpenQuestions(methodology), [methodology]);
+  const totalQuestions = getTotalQuestions(methodology);
+  const answeredCount = Object.keys(answers).filter(k => blocks.some(b => b.questions.some(q => q.id === k))).length;
   const progress = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
 
   useEffect(() => {
