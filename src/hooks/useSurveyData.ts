@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { questions, sections, type Respondent, type Company } from "@/data/mockData";
+import { isCopsoqQuestionId, normalizeMethodology, type Methodology } from "@/lib/methodology";
 
 export interface SurveyResponse {
   id: string;
