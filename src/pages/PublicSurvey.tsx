@@ -217,7 +217,12 @@ export default function PublicSurvey() {
         estado_civil: demographics.estado_civil || null,
         tempo_empresa: demographics.tempo_empresa || null,
         answers: answers as any,
-        open_answers: openAnswers as any,
+        open_answers: {
+          ...openAnswers,
+          ...(Object.keys(perpetrators).length > 0
+            ? { __perpetrators: JSON.stringify(perpetrators), __methodology: methodology }
+            : { __methodology: methodology }),
+        } as any,
         response_timestamp: new Date().toISOString(),
       }] as any);
       if (err) throw err;
