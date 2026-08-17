@@ -82,7 +82,7 @@ export default function Companies() {
   const branchKey = (cnpj: string, city: any) => `${cnpj}__${normalizeCity(city)}`;
 
   const companies: CompanyEntry[] = [];
-  const branchMap = new Map<string, { id: string; cnpj: string; city: string; name: string; sector: string; employee_count: number | null; count: number; sectors: CompanySector[]; priority: 0 | 1 }>();
+  const branchMap = new Map<string, { id: string; cnpj: string; city: string; name: string; sector: string; employee_count: number | null; methodology: string; count: number; sectors: CompanySector[]; priority: 0 | 1 }>();
   const cnpjCounts = new Map<string, number>();
 
   configs.forEach((c: any) => {
@@ -100,11 +100,12 @@ export default function Companies() {
         current.name = c.company_name || current.name;
         current.sector = c.sector || current.sector;
         current.employee_count = c.employee_count || current.employee_count;
+        current.methodology = c.methodology || current.methodology;
         current.priority = priority;
         if (parsedSectors.length > 0 || isPlaceholder) current.sectors = parsedSectors;
       }
     } else {
-      branchMap.set(key, { id: c.id, cnpj, city, name: c.company_name, sector: c.sector || "", employee_count: c.employee_count || null, count: isPlaceholder ? 0 : 1, priority, sectors: parsedSectors });
+      branchMap.set(key, { id: c.id, cnpj, city, name: c.company_name, sector: c.sector || "", employee_count: c.employee_count || null, methodology: c.methodology || "proart", count: isPlaceholder ? 0 : 1, priority, sectors: parsedSectors });
     }
   });
   branchMap.forEach(val => {
@@ -113,10 +114,11 @@ export default function Companies() {
   branchMap.forEach((val, key) => {
     companies.push({
       id: val.id, key, cnpj: val.cnpj, company_name: val.name, address_city: val.city,
-      sector: val.sector, employee_count: val.employee_count, form_count: val.count,
-      sectors: val.sectors, has_branches: (cnpjCounts.get(val.cnpj) || 0) > 1,
+      sector: val.sector, employee_count: val.employee_count, methodology: val.methodology,
+      form_count: val.count, sectors: val.sectors, has_branches: (cnpjCounts.get(val.cnpj) || 0) > 1,
     });
   });
+
 
   const addCompany = useMutation({
     mutationFn: async (data: { formData: typeof formData; sectors: CompanySector[] }) => {
