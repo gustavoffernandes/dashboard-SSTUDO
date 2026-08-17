@@ -27,6 +27,7 @@ export interface FormConfig {
   configId: string;
   companyKey: string;
   title: string;
+  methodology: Methodology;
 }
 
 const COMPANY_COLORS = [
