@@ -247,6 +247,7 @@ export default function Companies() {
       name: company.company_name,
       cnpj: formatCNPJ(company.cnpj),
       sector: company.sector || "",
+      methodology: company.methodology || "proart",
       employee_count: company.employee_count ? String(company.employee_count) : "",
       contact_name: cfg?.contact_name || "",
       contact_email: cfg?.contact_email || "",
