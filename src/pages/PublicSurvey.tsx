@@ -401,15 +401,21 @@ export default function PublicSurvey() {
               <BookOpen className="h-10 w-10 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3 text-white">{config?.form_title || "Avaliação PROART"}</h1>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3 text-white">{config?.form_title || `Avaliação ${meta.label}`}</h1>
               <p className="text-sm max-w-lg mx-auto leading-relaxed" style={{ color: `hsl(${slate})` }}>
-                {config?.description || "Pesquisa para avaliação de fatores de risco psicossocial no ambiente de trabalho, fundamentada no Protocolo PROART."}
+                {config?.description || `Pesquisa para avaliação de fatores de risco psicossocial no ambiente de trabalho, fundamentada na metodologia ${meta.label}.`}
               </p>
-              {config?.company_name && (
-                <div className="mt-4 inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold" style={{ background: `hsl(${teal} / 0.1)`, color: `hsl(${teal})`, border: `1px solid hsl(${teal} / 0.2)` }}>
-                  <Briefcase className="h-3.5 w-3.5" /> {config.company_name}
+              <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+                {config?.company_name && (
+                  <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold" style={{ background: `hsl(${teal} / 0.1)`, color: `hsl(${teal})`, border: `1px solid hsl(${teal} / 0.2)` }}>
+                    <Briefcase className="h-3.5 w-3.5" /> {config.company_name}
+                  </div>
+                )}
+                <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold" style={{ background: `hsl(${slate} / 0.12)`, color: `hsl(${tealLight})`, border: `1px solid hsl(${slate} / 0.2)` }}>
+                  <BookOpen className="h-3.5 w-3.5" /> {meta.label}
                 </div>
-              )}
+              </div>
+
             </div>
 
             <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
