@@ -819,17 +819,18 @@ function QuestionCard({ question, value, onChange, hideLegend, perpetrators = []
           <p className="text-xs font-semibold mb-2" style={{ color: `hsl(${tealLight})` }}>Quem praticou esse comportamento? (pode marcar mais de um)</p>
           <div className="flex flex-wrap gap-2">
             {COPSOQ_PERPETRATORS.map(p => {
-              const active = perpetrators.includes(p.id);
+              const active = perpetrators.includes(p);
               return (
-                <button key={p.id} type="button" onClick={() => togglePerpetrator(p.id)}
+                <button key={p} type="button" onClick={() => togglePerpetrator(p)}
                   className="rounded-full px-3 py-1.5 text-xs font-semibold border-2 transition-all"
                   style={{
                     background: active ? `hsl(${teal})` : `hsl(0 0% 100% / 0.06)`,
                     color: 'white',
                     borderColor: active ? `hsl(${teal})` : `hsl(0 0% 100% / 0.2)`,
                   }}>
-                  {p.label}
+                  {p}
                 </button>
+
               );
             })}
           </div>
