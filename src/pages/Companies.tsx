@@ -135,6 +135,7 @@ export default function Companies() {
         company_name: data.formData.company_name, cnpj: cnpjDigits,
         spreadsheet_id: "__placeholder__", sheet_name: "Form Responses 1", is_active: false,
         sector: data.formData.sector || null,
+        methodology: data.formData.methodology || "proart",
         employee_count: data.formData.employee_count ? parseInt(data.formData.employee_count) : null,
         sectors: data.sectors as any,
         contact_name: data.formData.contact_name || null,
