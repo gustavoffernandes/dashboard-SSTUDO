@@ -570,7 +570,8 @@ export default function PublicSurvey() {
         {/* Scale questions */}
         {step.startsWith("scale-") && (() => {
           const scaleIdx = parseInt(step.split("-")[1]);
-          const scale = scales[scaleIdx];
+          const scale = blocks[scaleIdx];
+          if (!scale) return null;
           const scaleAnswered = scale.questions.filter(q => answers[q.id] !== undefined).length;
           return (
             <div className="space-y-5">
@@ -590,23 +591,34 @@ export default function PublicSurvey() {
                 </div>
               </div>
 
-              {/* Likert legend */}
-              <div className="rounded-xl p-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1" style={{ background: `hsl(${navyLight})`, border: `1px solid hsl(${slate} / 0.1)` }}>
-                {LIKERT_OPTIONS.map(opt => (
-                  <span key={opt.value} className="text-[11px] font-medium" style={{ color: `hsl(${slate})` }}>
-                    <strong className="font-bold" style={{ color: `hsl(${teal})` }}>{opt.value}</strong> = {opt.label}
-                  </span>
-                ))}
-              </div>
+              {/* Legenda da escala (quando comum a todo o bloco) */}
+              {scale.sharedOptions && (
+                <div className="rounded-xl p-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1" style={{ background: `hsl(${navyLight})`, border: `1px solid hsl(${slate} / 0.1)` }}>
+                  {scale.sharedOptions.map(opt => (
+                    <span key={opt.value} className="text-[11px] font-medium" style={{ color: `hsl(${slate})` }}>
+                      <strong className="font-bold" style={{ color: `hsl(${teal})` }}>{opt.value}</strong> = {opt.label}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <div className="space-y-3">
                 {scale.questions.map(q => (
-                  <QuestionCard key={q.id} question={q} value={answers[q.id]} onChange={v => setAnswer(q.id, v)} />
+                  <QuestionCard
+                    key={q.id}
+                    question={q}
+                    value={answers[q.id]}
+                    onChange={v => setAnswer(q.id, v)}
+                    hideLegend={!!scale.sharedOptions}
+                    perpetrators={perpetrators[q.id] || []}
+                    onPerpetratorsChange={list => setPerpetrators(prev => ({ ...prev, [q.id]: list }))}
+                  />
                 ))}
               </div>
             </div>
           );
         })()}
+
 
         {/* Open questions */}
         {step === "open" && (
