@@ -148,7 +148,7 @@ export default function Companies() {
       queryClient.invalidateQueries({ queryKey: ["google-forms-config"] });
       queryClient.invalidateQueries({ queryKey: ["google-forms-config-all"] });
       setShowForm(false);
-      setFormData({ company_name: "", cnpj: "", sector: "", employee_count: "", contact_name: "", contact_email: "", contact_phone: "", address_street: "", address_city: "", address_state: "", address_zip: "" });
+      setFormData({ company_name: "", cnpj: "", sector: "", employee_count: "", methodology: "proart", contact_name: "", contact_email: "", contact_phone: "", address_street: "", address_city: "", address_state: "", address_zip: "" });
       setFormSectors([]);
       toast({ title: "Empresa cadastrada com sucesso!" });
     },
