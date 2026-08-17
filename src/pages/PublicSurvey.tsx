@@ -624,7 +624,7 @@ export default function PublicSurvey() {
         {step === "open" && (
           <div className="space-y-5">
             <SectionHeader icon={FileText} title="Sua Percepção" subtitle="Respostas livres — opcional, mas muito valiosas para a análise" />
-            {OPEN_QUESTIONS.map((q, i) => (
+            {openQuestions.map((q, i) => (
               <div key={q.id} className="rounded-2xl p-5 space-y-3" style={{ background: `hsl(${navyLight})`, border: `1px solid hsl(${slate} / 0.1)` }}>
                 <p className="text-sm font-semibold text-white">
                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white mr-2" style={{ background: `hsl(${teal})` }}>{i + 1}</span>
@@ -659,7 +659,7 @@ export default function PublicSurvey() {
                 </div>
               )}
               <div className="space-y-1">
-                {scales.map((scale, i) => {
+                {blocks.map((scale, i) => {
                   const scaleAnswered = scale.questions.filter(q => answers[q.id] !== undefined).length;
                   const isComplete = scaleAnswered === scale.questions.length;
                   return (
