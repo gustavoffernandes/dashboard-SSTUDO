@@ -98,6 +98,7 @@ export function useSurveyData() {
       formConfigs.push({
         configId: c.id,
         companyKey: key,
+        methodology: normalizeMethodology((c as any).methodology),
         title: c.form_title || c.sheet_name || `Formulário ${cnpjToConfigIds.get(key)!.length}`,
       });
     }
