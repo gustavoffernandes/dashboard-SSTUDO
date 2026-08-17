@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { questions, sections } from "@/data/mockData";
 import { exportCompanyPDF } from "@/lib/pdfExport";
+import { normalizeMethodology, methodologyLabel, getMethodologyMeta } from "@/lib/methodology";
 
 interface FormConfig {
   id: string;
@@ -76,8 +77,10 @@ export default function Forms() {
       cnpj: c.cnpj || "",
       name: c.company_name || "Empresa sem nome",
       city,
+      methodology: normalizeMethodology(c.methodology),
       label: city ? `${c.company_name} — ${city}` : c.company_name,
     };
+
   }).sort((a, b) => a.label.localeCompare(b.label));
 
   const { data: responseCounts = {} } = useQuery({
@@ -118,6 +121,7 @@ export default function Forms() {
         company_name: branch.name,
         cnpj: branch.cnpj,
         address_city: branch.city || null,
+        methodology: normalizeMethodology(placeholder?.methodology),
         form_title: data.form_title,
         spreadsheet_id: "__internal__",
         sheet_name: "internal",
@@ -290,7 +294,21 @@ export default function Forms() {
                     <option value="">Selecione uma empresa...</option>
                     {registeredCompanies.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                   </select>
+                  {(() => {
+                    const selected = registeredCompanies.find(c => c.id === formData.company_cnpj);
+                    if (!selected) return <p className="text-[10px] text-muted-foreground">A metodologia do formulário vem da empresa selecionada.</p>;
+                    const meta = getMethodologyMeta(selected.methodology);
+                    return (
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wider">
+                          <Lock className="h-3 w-3" /> {meta.label}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">{meta.questionCount} questões · {meta.duration} min</span>
+                      </div>
+                    );
+                  })()}
                 </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-foreground">Título do Formulário *</label>
                   <input value={formData.form_title} onChange={e => setFormData({ ...formData, form_title: e.target.value })}
@@ -421,7 +439,14 @@ export default function Forms() {
                     const count = responseCounts[config.id] || 0;
                     return (
                       <tr key={config.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 font-medium text-foreground">{(config as any).form_title || config.company_name}</td>
+                        <td className="px-4 py-3 font-medium text-foreground">
+                          <div className="flex items-center gap-2">
+                            <span>{(config as any).form_title || config.company_name}</span>
+                            <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-foreground uppercase tracking-wider shrink-0">
+                              {methodologyLabel(normalizeMethodology((config as any).methodology))}
+                            </span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-muted-foreground">{config.company_name}{(config as any).address_city ? ` — ${(config as any).address_city}` : ""}</td>
                         <td className="px-4 py-3 text-center text-xs text-muted-foreground">{new Date(config.created_at).toLocaleDateString("pt-BR")}</td>
                         <td className="px-4 py-3 text-center font-medium text-foreground">{count}</td>
@@ -466,7 +491,11 @@ export default function Forms() {
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span>{new Date(config.created_at).toLocaleDateString("pt-BR")}</span>
                       <span className="font-medium text-foreground">{count} respostas</span>
+                      <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-foreground uppercase tracking-wider">
+                        {methodologyLabel(normalizeMethodology((config as any).methodology))}
+                      </span>
                     </div>
+
                     <div className="flex items-center gap-1 pt-1 border-t border-border">
                       <button onClick={() => copyLink(config.id, config.company_name, config.link_token)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Copy className="h-3 w-3" /> Copiar</button>
                       <button onClick={() => refreshLink.mutate(config)} disabled={refreshLink.isPending} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><RefreshCw className={cn("h-3 w-3", refreshLink.isPending && "animate-spin")} /> Refresh</button>

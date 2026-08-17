@@ -2,11 +2,16 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { PROART_QUESTIONS, OPEN_QUESTIONS, LIKERT_OPTIONS, DEMOGRAPHIC_OPTIONS, getQuestionsByScale } from "@/lib/proartQuestions";
+import { DEMOGRAPHIC_OPTIONS } from "@/lib/proartQuestions";
+import { COPSOQ_PERPETRATORS } from "@/lib/copsoqQuestions";
+import {
+  normalizeMethodology, getSurveyBlocks, getTotalQuestions, getOpenQuestions,
+  getMethodologyMeta, type Methodology, type ResolvedOption, type ResolvedQuestion,
+} from "@/lib/methodology";
 import { CheckCircle2, ChevronLeft, ChevronRight, Clock, FileText, Loader2, Lock, Save, Shield, AlertCircle, User, Briefcase, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Step = "welcome" | "consent" | "password" | "demographics" | "scale-0" | "scale-1" | "scale-2" | "scale-3" | "open" | "review" | "submitted";
+type Step = string;
 
 interface FormConfig {
   id: string;
@@ -71,9 +76,14 @@ export default function PublicSurvey() {
   const [previewMode, setPreviewMode] = useState(false);
 
 
-  const scales = useMemo(() => getQuestionsByScale(), []);
-  const totalQuestions = PROART_QUESTIONS.length;
-  const answeredCount = Object.keys(answers).length;
+  const [perpetrators, setPerpetrators] = useState<Record<string, string[]>>({});
+
+  const methodology: Methodology = normalizeMethodology((config as any)?.methodology);
+  const meta = getMethodologyMeta(methodology);
+  const blocks = useMemo(() => getSurveyBlocks(methodology), [methodology]);
+  const openQuestions = useMemo(() => getOpenQuestions(methodology), [methodology]);
+  const totalQuestions = getTotalQuestions(methodology);
+  const answeredCount = Object.keys(answers).filter(k => blocks.some(b => b.questions.some(q => q.id === k))).length;
   const progress = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
 
   useEffect(() => {
@@ -207,7 +217,12 @@ export default function PublicSurvey() {
         estado_civil: demographics.estado_civil || null,
         tempo_empresa: demographics.tempo_empresa || null,
         answers: answers as any,
-        open_answers: openAnswers as any,
+        open_answers: {
+          ...openAnswers,
+          ...(Object.keys(perpetrators).length > 0
+            ? { __perpetrators: JSON.stringify(perpetrators), __methodology: methodology }
+            : { __methodology: methodology }),
+        } as any,
         response_timestamp: new Date().toISOString(),
       }] as any);
       if (err) throw err;
@@ -261,7 +276,7 @@ export default function PublicSurvey() {
     const s: Step[] = ["welcome"];
     if (config?.require_consent) s.push("consent");
     if (config?.require_password) s.push("password");
-    s.push("demographics", "scale-0", "scale-1", "scale-2", "scale-3", "open", "review");
+    s.push("demographics", ...blocks.map((_, i) => `scale-${i}`), "open", "review");
     return s;
   };
 
@@ -271,8 +286,9 @@ export default function PublicSurvey() {
     if (step === "demographics") return !!(demographics.sex && demographics.age && demographics.escolaridade && demographics.tempo_empresa && demographics.sector);
     if (step.startsWith("scale-")) {
       const scaleIdx = parseInt(step.split("-")[1]);
-      const scale = scales[scaleIdx];
-      return scale.questions.every(q => answers[q.id] !== undefined);
+      const block = blocks[scaleIdx];
+      if (!block) return true;
+      return block.questions.every(q => answers[q.id] !== undefined);
     }
     return true;
   };
@@ -327,12 +343,9 @@ export default function PublicSurvey() {
     consent: "Consentimento",
     password: "Senha",
     demographics: "Seus Dados",
-    "scale-0": scales[0]?.name || "Escala 1",
-    "scale-1": scales[1]?.name || "Escala 2",
-    "scale-2": scales[2]?.name || "Escala 3",
-    "scale-3": scales[3]?.name || "Escala 4",
     open: "Percepção",
     review: "Revisão",
+    ...Object.fromEntries(blocks.map((b, i) => [`scale-${i}`, b.shortName || b.name])),
   };
 
   return (
@@ -393,21 +406,27 @@ export default function PublicSurvey() {
               <BookOpen className="h-10 w-10 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3 text-white">{config?.form_title || "Avaliação PROART"}</h1>
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3 text-white">{config?.form_title || `Avaliação ${meta.label}`}</h1>
               <p className="text-sm max-w-lg mx-auto leading-relaxed" style={{ color: `hsl(${slate})` }}>
-                {config?.description || "Pesquisa para avaliação de fatores de risco psicossocial no ambiente de trabalho, fundamentada no Protocolo PROART."}
+                {config?.description || `Pesquisa para avaliação de fatores de risco psicossocial no ambiente de trabalho, fundamentada na metodologia ${meta.label}.`}
               </p>
-              {config?.company_name && (
-                <div className="mt-4 inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold" style={{ background: `hsl(${teal} / 0.1)`, color: `hsl(${teal})`, border: `1px solid hsl(${teal} / 0.2)` }}>
-                  <Briefcase className="h-3.5 w-3.5" /> {config.company_name}
+              <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+                {config?.company_name && (
+                  <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold" style={{ background: `hsl(${teal} / 0.1)`, color: `hsl(${teal})`, border: `1px solid hsl(${teal} / 0.2)` }}>
+                    <Briefcase className="h-3.5 w-3.5" /> {config.company_name}
+                  </div>
+                )}
+                <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-xs font-bold" style={{ background: `hsl(${slate} / 0.12)`, color: `hsl(${tealLight})`, border: `1px solid hsl(${slate} / 0.2)` }}>
+                  <BookOpen className="h-3.5 w-3.5" /> {meta.label}
                 </div>
-              )}
+              </div>
+
             </div>
 
             <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
               {[
-                { icon: FileText, value: "91", label: "Questões" },
-                { icon: Clock, value: "15-20", label: "Minutos" },
+                { icon: FileText, value: String(totalQuestions), label: "Questões" },
+                { icon: Clock, value: meta.duration, label: "Minutos" },
                 { icon: Save, value: "Auto", label: "Salvamento" },
               ].map(({ icon: Icon, value, label }) => (
                 <div key={label} className="p-4 rounded-2xl" style={{ background: `hsl(${navyLight})`, border: `1px solid hsl(${slate} / 0.1)` }}>
@@ -562,7 +581,8 @@ export default function PublicSurvey() {
         {/* Scale questions */}
         {step.startsWith("scale-") && (() => {
           const scaleIdx = parseInt(step.split("-")[1]);
-          const scale = scales[scaleIdx];
+          const scale = blocks[scaleIdx];
+          if (!scale) return null;
           const scaleAnswered = scale.questions.filter(q => answers[q.id] !== undefined).length;
           return (
             <div className="space-y-5">
@@ -582,29 +602,40 @@ export default function PublicSurvey() {
                 </div>
               </div>
 
-              {/* Likert legend */}
-              <div className="rounded-xl p-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1" style={{ background: `hsl(${navyLight})`, border: `1px solid hsl(${slate} / 0.1)` }}>
-                {LIKERT_OPTIONS.map(opt => (
-                  <span key={opt.value} className="text-[11px] font-medium" style={{ color: `hsl(${slate})` }}>
-                    <strong className="font-bold" style={{ color: `hsl(${teal})` }}>{opt.value}</strong> = {opt.label}
-                  </span>
-                ))}
-              </div>
+              {/* Legenda da escala (quando comum a todo o bloco) */}
+              {scale.sharedOptions && (
+                <div className="rounded-xl p-3 flex flex-wrap items-center justify-center gap-x-4 gap-y-1" style={{ background: `hsl(${navyLight})`, border: `1px solid hsl(${slate} / 0.1)` }}>
+                  {scale.sharedOptions.map(opt => (
+                    <span key={opt.value} className="text-[11px] font-medium" style={{ color: `hsl(${slate})` }}>
+                      <strong className="font-bold" style={{ color: `hsl(${teal})` }}>{opt.value}</strong> = {opt.label}
+                    </span>
+                  ))}
+                </div>
+              )}
 
               <div className="space-y-3">
                 {scale.questions.map(q => (
-                  <QuestionCard key={q.id} question={q} value={answers[q.id]} onChange={v => setAnswer(q.id, v)} />
+                  <QuestionCard
+                    key={q.id}
+                    question={q}
+                    value={answers[q.id]}
+                    onChange={v => setAnswer(q.id, v)}
+                    hideLegend={!!scale.sharedOptions}
+                    perpetrators={perpetrators[q.id] || []}
+                    onPerpetratorsChange={list => setPerpetrators(prev => ({ ...prev, [q.id]: list }))}
+                  />
                 ))}
               </div>
             </div>
           );
         })()}
 
+
         {/* Open questions */}
         {step === "open" && (
           <div className="space-y-5">
             <SectionHeader icon={FileText} title="Sua Percepção" subtitle="Respostas livres — opcional, mas muito valiosas para a análise" />
-            {OPEN_QUESTIONS.map((q, i) => (
+            {openQuestions.map((q, i) => (
               <div key={q.id} className="rounded-2xl p-5 space-y-3" style={{ background: `hsl(${navyLight})`, border: `1px solid hsl(${slate} / 0.1)` }}>
                 <p className="text-sm font-semibold text-white">
                   <span className="inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold text-white mr-2" style={{ background: `hsl(${teal})` }}>{i + 1}</span>
@@ -639,7 +670,7 @@ export default function PublicSurvey() {
                 </div>
               )}
               <div className="space-y-1">
-                {scales.map((scale, i) => {
+                {blocks.map((scale, i) => {
                   const scaleAnswered = scale.questions.filter(q => answers[q.id] !== undefined).length;
                   const isComplete = scaleAnswered === scale.questions.length;
                   return (
@@ -753,8 +784,20 @@ function StyledSelect({ label, value, onChange, options, required }: { label: st
   );
 }
 
-function QuestionCard({ question, value, onChange }: { question: { id: string; number: number; text: string }; value?: number; onChange: (v: number) => void }) {
+function QuestionCard({ question, value, onChange, hideLegend, perpetrators = [], onPerpetratorsChange }: {
+  question: ResolvedQuestion;
+  value?: number;
+  onChange: (v: number) => void;
+  hideLegend?: boolean;
+  perpetrators?: string[];
+  onPerpetratorsChange?: (list: string[]) => void;
+}) {
   const isAnswered = value !== undefined;
+  const showPerpetrators = !!question.isOffensive && isAnswered && (value as number) > 0;
+  const togglePerpetrator = (id: string) => {
+    if (!onPerpetratorsChange) return;
+    onPerpetratorsChange(perpetrators.includes(id) ? perpetrators.filter(p => p !== id) : [...perpetrators, id]);
+  };
   return (
     <div className="rounded-2xl p-4 transition-all duration-200"
       style={{ background: isAnswered ? `hsl(${teal} / 0.08)` : `hsl(218 35% 32%)`, border: `1.5px solid ${isAnswered ? `hsl(${teal} / 0.45)` : `hsl(${slate} / 0.25)`}` }}>
@@ -763,24 +806,48 @@ function QuestionCard({ question, value, onChange }: { question: { id: string; n
         {question.text}
       </p>
       <div className="flex flex-wrap gap-2">
-        {LIKERT_OPTIONS.map(opt => {
+        {question.options.map(opt => {
           const isSelected = value === opt.value;
           return (
             <button key={opt.value} onClick={() => onChange(opt.value)}
               className="flex-1 min-w-[56px] rounded-xl px-2 py-2.5 text-center transition-all duration-200 border-2"
               style={{
                 background: isSelected ? `hsl(${teal})` : `hsl(0 0% 100% / 0.08)`,
-                color: isSelected ? 'white' : 'white',
+                color: 'white',
                 borderColor: isSelected ? `hsl(${teal})` : `hsl(0 0% 100% / 0.25)`,
                 boxShadow: isSelected ? `0 4px 15px -4px hsl(${teal} / 0.5)` : 'none',
                 transform: isSelected ? 'scale(1.05)' : 'scale(1)',
               }}>
               <span className="block text-sm font-extrabold">{opt.value}</span>
-              <span className="block text-[9px] leading-tight mt-0.5 opacity-90 font-semibold">{opt.label}</span>
+              {!hideLegend && <span className="block text-[9px] leading-tight mt-0.5 opacity-90 font-semibold">{opt.label}</span>}
             </button>
           );
         })}
       </div>
+
+      {showPerpetrators && (
+        <div className="mt-4 pt-3 border-t" style={{ borderColor: `hsl(${slate} / 0.2)` }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: `hsl(${tealLight})` }}>Quem praticou esse comportamento? (pode marcar mais de um)</p>
+          <div className="flex flex-wrap gap-2">
+            {COPSOQ_PERPETRATORS.map(p => {
+              const active = perpetrators.includes(p);
+              return (
+                <button key={p} type="button" onClick={() => togglePerpetrator(p)}
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold border-2 transition-all"
+                  style={{
+                    background: active ? `hsl(${teal})` : `hsl(0 0% 100% / 0.06)`,
+                    color: 'white',
+                    borderColor: active ? `hsl(${teal})` : `hsl(0 0% 100% / 0.2)`,
+                  }}>
+                  {p}
+                </button>
+
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

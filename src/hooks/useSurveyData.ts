@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { questions, sections, type Respondent, type Company } from "@/data/mockData";
+import { isCopsoqQuestionId, normalizeMethodology, type Methodology } from "@/lib/methodology";
 
 export interface SurveyResponse {
   id: string;
@@ -26,6 +27,7 @@ export interface FormConfig {
   configId: string;
   companyKey: string;
   title: string;
+  methodology: Methodology;
 }
 
 const COMPANY_COLORS = [
@@ -97,6 +99,7 @@ export function useSurveyData() {
       formConfigs.push({
         configId: c.id,
         companyKey: key,
+        methodology: normalizeMethodology((c as any).methodology),
         title: c.form_title || c.sheet_name || `Formulário ${cnpjToConfigIds.get(key)!.length}`,
       });
     }
@@ -146,6 +149,15 @@ export function useSurveyData() {
 
     if (r.answers) {
       Object.entries(r.answers).forEach(([key, cellValue]) => {
+        // Strategy 0: COPSOQ question ids (escala 0-4)
+        if (isCopsoqQuestionId(key)) {
+          const numValue = parseInt(String(cellValue), 10);
+          if (numValue >= 0 && numValue <= 4) {
+            formattedAnswers[key] = numValue;
+          }
+          return;
+        }
+
         // Strategy 1: Key is already a valid question ID (internal forms)
         if (VALID_QUESTION_IDS.has(key)) {
           const numValue = parseInt(String(cellValue), 10);
@@ -154,6 +166,7 @@ export function useSurveyData() {
           }
           return;
         }
+
 
         // Strategy 2: Try text-based value parsing for legacy data
         let numValue = parseInt(String(cellValue), 10);

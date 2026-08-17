@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Building2, Plus, Trash2, Loader2, Edit2, Check, X, MapPin, Phone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { METHODOLOGIES, methodologyLabel, normalizeMethodology } from "@/lib/methodology";
 
 interface CompanyEntry {
   id: string;
@@ -13,6 +14,7 @@ interface CompanyEntry {
   address_city: string;
   sector: string;
   employee_count: number | null;
+  methodology: string;
   form_count: number;
   sectors: CompanySector[];
   has_branches: boolean;
@@ -50,17 +52,18 @@ export default function Companies() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({
-    company_name: "", cnpj: "", sector: "", employee_count: "",
+    company_name: "", cnpj: "", sector: "", employee_count: "", methodology: "proart",
     contact_name: "", contact_email: "", contact_phone: "",
     address_street: "", address_city: "", address_state: "", address_zip: "",
   });
   const [formSectors, setFormSectors] = useState<CompanySector[]>([]);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editData, setEditData] = useState({
-    name: "", cnpj: "", sector: "", employee_count: "",
+    name: "", cnpj: "", sector: "", employee_count: "", methodology: "proart",
     contact_name: "", contact_email: "", contact_phone: "",
     address_street: "", address_city: "", address_state: "", address_zip: "",
   });
+
   const [editSectors, setEditSectors] = useState<CompanySector[]>([]);
   const [newSector, setNewSector] = useState<CompanySector>({ name: "", code: "", description: "", roles: [] });
   const [editingSectorIdx, setEditingSectorIdx] = useState<number | null>(null);
@@ -80,7 +83,7 @@ export default function Companies() {
   const branchKey = (cnpj: string, city: any) => `${cnpj}__${normalizeCity(city)}`;
 
   const companies: CompanyEntry[] = [];
-  const branchMap = new Map<string, { id: string; cnpj: string; city: string; name: string; sector: string; employee_count: number | null; count: number; sectors: CompanySector[]; priority: 0 | 1 }>();
+  const branchMap = new Map<string, { id: string; cnpj: string; city: string; name: string; sector: string; employee_count: number | null; methodology: string; count: number; sectors: CompanySector[]; priority: 0 | 1 }>();
   const cnpjCounts = new Map<string, number>();
 
   configs.forEach((c: any) => {
@@ -98,11 +101,12 @@ export default function Companies() {
         current.name = c.company_name || current.name;
         current.sector = c.sector || current.sector;
         current.employee_count = c.employee_count || current.employee_count;
+        current.methodology = c.methodology || current.methodology;
         current.priority = priority;
         if (parsedSectors.length > 0 || isPlaceholder) current.sectors = parsedSectors;
       }
     } else {
-      branchMap.set(key, { id: c.id, cnpj, city, name: c.company_name, sector: c.sector || "", employee_count: c.employee_count || null, count: isPlaceholder ? 0 : 1, priority, sectors: parsedSectors });
+      branchMap.set(key, { id: c.id, cnpj, city, name: c.company_name, sector: c.sector || "", employee_count: c.employee_count || null, methodology: c.methodology || "proart", count: isPlaceholder ? 0 : 1, priority, sectors: parsedSectors });
     }
   });
   branchMap.forEach(val => {
@@ -111,10 +115,11 @@ export default function Companies() {
   branchMap.forEach((val, key) => {
     companies.push({
       id: val.id, key, cnpj: val.cnpj, company_name: val.name, address_city: val.city,
-      sector: val.sector, employee_count: val.employee_count, form_count: val.count,
-      sectors: val.sectors, has_branches: (cnpjCounts.get(val.cnpj) || 0) > 1,
+      sector: val.sector, employee_count: val.employee_count, methodology: val.methodology,
+      form_count: val.count, sectors: val.sectors, has_branches: (cnpjCounts.get(val.cnpj) || 0) > 1,
     });
   });
+
 
   const addCompany = useMutation({
     mutationFn: async (data: { formData: typeof formData; sectors: CompanySector[] }) => {
@@ -131,6 +136,7 @@ export default function Companies() {
         company_name: data.formData.company_name, cnpj: cnpjDigits,
         spreadsheet_id: "__placeholder__", sheet_name: "Form Responses 1", is_active: false,
         sector: data.formData.sector || null,
+        methodology: data.formData.methodology || "proart",
         employee_count: data.formData.employee_count ? parseInt(data.formData.employee_count) : null,
         sectors: data.sectors as any,
         contact_name: data.formData.contact_name || null,
@@ -147,7 +153,7 @@ export default function Companies() {
       queryClient.invalidateQueries({ queryKey: ["google-forms-config"] });
       queryClient.invalidateQueries({ queryKey: ["google-forms-config-all"] });
       setShowForm(false);
-      setFormData({ company_name: "", cnpj: "", sector: "", employee_count: "", contact_name: "", contact_email: "", contact_phone: "", address_street: "", address_city: "", address_state: "", address_zip: "" });
+      setFormData({ company_name: "", cnpj: "", sector: "", employee_count: "", methodology: "proart", contact_name: "", contact_email: "", contact_phone: "", address_street: "", address_city: "", address_state: "", address_zip: "" });
       setFormSectors([]);
       toast({ title: "Empresa cadastrada com sucesso!" });
     },
@@ -166,10 +172,26 @@ export default function Companies() {
         if (exists) throw new Error("Já existe uma empresa/filial cadastrada com este CNPJ e cidade");
       }
       const parsedEmployeeCount = data.employee_count ? Number(data.employee_count) : null;
+      const branchConfigIds = configs.filter((c: any) => c.cnpj === cnpj && normalizeCity(c.address_city) === normalizeCity(city)).map((c: any) => c.id);
+
+      // Trocar a metodologia é bloqueado quando já existem respostas coletadas
+      const currentMethodology = (configs.find((c: any) => c.cnpj === cnpj && normalizeCity(c.address_city) === normalizeCity(city) && c.spreadsheet_id === "__placeholder__") as any)?.methodology || "proart";
+      const newMethodology = data.methodology || "proart";
+      if (newMethodology !== currentMethodology && branchConfigIds.length > 0) {
+        const { count } = await supabase
+          .from("survey_responses")
+          .select("id", { count: "exact", head: true })
+          .in("config_id", branchConfigIds);
+        if ((count || 0) > 0) {
+          throw new Error("Não é possível trocar a metodologia: esta empresa já possui respostas coletadas. As respostas antigas não são comparáveis entre metodologias.");
+        }
+      }
+
       const updatePayload: any = {
         company_name: normalizedName,
         cnpj: newCnpjDigits,
         sector: data.sector?.trim() || null,
+        methodology: newMethodology,
         employee_count: parsedEmployeeCount,
         sectors: sectors as any,
         contact_name: data.contact_name || null,
@@ -180,8 +202,8 @@ export default function Companies() {
         address_state: data.address_state || null,
         address_zip: data.address_zip || null,
       };
-      const branchConfigIds = configs.filter((c: any) => c.cnpj === cnpj && normalizeCity(c.address_city) === normalizeCity(city)).map((c: any) => c.id);
       for (const cid of branchConfigIds) {
+
         const { error } = await (supabase.from("google_forms_config") as any).update(updatePayload).eq("id", cid);
         if (error) throw error;
       }
@@ -246,6 +268,7 @@ export default function Companies() {
       name: company.company_name,
       cnpj: formatCNPJ(company.cnpj),
       sector: company.sector || "",
+      methodology: company.methodology || "proart",
       employee_count: company.employee_count ? String(company.employee_count) : "",
       contact_name: cfg?.contact_name || "",
       contact_email: cfg?.contact_email || "",
@@ -409,7 +432,21 @@ export default function Companies() {
                   <input type="number" value={formData.employee_count} onChange={e => setFormData({ ...formData, employee_count: e.target.value })}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary transition" placeholder="Ex: 50" min="1" />
                 </div>
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-xs font-medium text-foreground">Metodologia do Diagnóstico *</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {METHODOLOGIES.map(m => (
+                      <button key={m.id} type="button" onClick={() => setFormData({ ...formData, methodology: m.id })}
+                        className={`text-left rounded-lg border-2 p-3 transition-colors ${formData.methodology === m.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}>
+                        <span className="block text-sm font-semibold text-foreground">{m.label}</span>
+                        <span className="block text-[11px] text-muted-foreground mt-0.5">{m.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Os formulários desta empresa usarão automaticamente esta metodologia.</p>
+                </div>
               </div>
+
             </div>
 
             <div className="space-y-3">
@@ -511,7 +548,16 @@ export default function Companies() {
                           <input type="number" value={editData.employee_count} onChange={e => setEditData({ ...editData, employee_count: e.target.value })}
                             className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary transition" min="1" />
                         </div>
+                        <div className="sm:col-span-2 space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Metodologia do Diagnóstico</label>
+                          <select value={editData.methodology} onChange={e => setEditData({ ...editData, methodology: e.target.value })}
+                            className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary transition">
+                            {METHODOLOGIES.map(m => <option key={m.id} value={m.id}>{m.label} — {m.questionCount} questões</option>)}
+                          </select>
+                          <p className="text-[10px] text-muted-foreground">A troca é bloqueada quando a empresa já possui respostas coletadas.</p>
+                        </div>
                       </div>
+
 
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contato</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -580,7 +626,11 @@ export default function Companies() {
                           {company.has_branches && (
                             <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary uppercase tracking-wider">Filial</span>
                           )}
+                          <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-[10px] font-semibold text-accent-foreground uppercase tracking-wider">
+                            {methodologyLabel(normalizeMethodology(company.methodology))}
+                          </span>
                         </div>
+
                         <p className="text-xs text-muted-foreground">CNPJ: {formatCNPJ(company.cnpj)}</p>
                         {company.sector && <p className="text-xs text-muted-foreground">Setor: {company.sector}</p>}
                         {company.employee_count && <p className="text-xs text-muted-foreground">Funcionários: {company.employee_count}</p>}
