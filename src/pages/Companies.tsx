@@ -431,7 +431,21 @@ export default function Companies() {
                   <input type="number" value={formData.employee_count} onChange={e => setFormData({ ...formData, employee_count: e.target.value })}
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary transition" placeholder="Ex: 50" min="1" />
                 </div>
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-xs font-medium text-foreground">Metodologia do Diagnóstico *</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {METHODOLOGIES.map(m => (
+                      <button key={m.id} type="button" onClick={() => setFormData({ ...formData, methodology: m.id })}
+                        className={`text-left rounded-lg border-2 p-3 transition-colors ${formData.methodology === m.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40"}`}>
+                        <span className="block text-sm font-semibold text-foreground">{m.label}</span>
+                        <span className="block text-[11px] text-muted-foreground mt-0.5">{m.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Os formulários desta empresa usarão automaticamente esta metodologia.</p>
+                </div>
               </div>
+
             </div>
 
             <div className="space-y-3">
