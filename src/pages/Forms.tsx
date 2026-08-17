@@ -294,7 +294,21 @@ export default function Forms() {
                     <option value="">Selecione uma empresa...</option>
                     {registeredCompanies.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                   </select>
+                  {(() => {
+                    const selected = registeredCompanies.find(c => c.id === formData.company_cnpj);
+                    if (!selected) return <p className="text-[10px] text-muted-foreground">A metodologia do formulário vem da empresa selecionada.</p>;
+                    const meta = getMethodologyMeta(selected.methodology);
+                    return (
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wider">
+                          <Lock className="h-3 w-3" /> {meta.label}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">{meta.questionCount} questões · {meta.duration} min</span>
+                      </div>
+                    );
+                  })()}
                 </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-medium text-foreground">Título do Formulário *</label>
                   <input value={formData.form_title} onChange={e => setFormData({ ...formData, form_title: e.target.value })}
