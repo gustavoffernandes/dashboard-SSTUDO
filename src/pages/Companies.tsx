@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Building2, Plus, Trash2, Loader2, Edit2, Check, X, MapPin, Phone } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { METHODOLOGIES, methodologyLabel, normalizeMethodology } from "@/lib/methodology";
 
 interface CompanyEntry {
   id: string;
