@@ -118,6 +118,7 @@ export default function Forms() {
         company_name: branch.name,
         cnpj: branch.cnpj,
         address_city: branch.city || null,
+        methodology: normalizeMethodology(placeholder?.methodology),
         form_title: data.form_title,
         spreadsheet_id: "__internal__",
         sheet_name: "internal",
