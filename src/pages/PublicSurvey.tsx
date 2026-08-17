@@ -414,8 +414,8 @@ export default function PublicSurvey() {
 
             <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
               {[
-                { icon: FileText, value: "91", label: "Questões" },
-                { icon: Clock, value: "15-20", label: "Minutos" },
+                { icon: FileText, value: String(totalQuestions), label: "Questões" },
+                { icon: Clock, value: meta.duration, label: "Minutos" },
                 { icon: Save, value: "Auto", label: "Salvamento" },
               ].map(({ icon: Icon, value, label }) => (
                 <div key={label} className="p-4 rounded-2xl" style={{ background: `hsl(${navyLight})`, border: `1px solid hsl(${slate} / 0.1)` }}>
