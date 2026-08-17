@@ -773,8 +773,20 @@ function StyledSelect({ label, value, onChange, options, required }: { label: st
   );
 }
 
-function QuestionCard({ question, value, onChange }: { question: { id: string; number: number; text: string }; value?: number; onChange: (v: number) => void }) {
+function QuestionCard({ question, value, onChange, hideLegend, perpetrators = [], onPerpetratorsChange }: {
+  question: ResolvedQuestion;
+  value?: number;
+  onChange: (v: number) => void;
+  hideLegend?: boolean;
+  perpetrators?: string[];
+  onPerpetratorsChange?: (list: string[]) => void;
+}) {
   const isAnswered = value !== undefined;
+  const showPerpetrators = !!question.isOffensive && isAnswered && (value as number) > 0;
+  const togglePerpetrator = (id: string) => {
+    if (!onPerpetratorsChange) return;
+    onPerpetratorsChange(perpetrators.includes(id) ? perpetrators.filter(p => p !== id) : [...perpetrators, id]);
+  };
   return (
     <div className="rounded-2xl p-4 transition-all duration-200"
       style={{ background: isAnswered ? `hsl(${teal} / 0.08)` : `hsl(218 35% 32%)`, border: `1.5px solid ${isAnswered ? `hsl(${teal} / 0.45)` : `hsl(${slate} / 0.25)`}` }}>
@@ -783,24 +795,47 @@ function QuestionCard({ question, value, onChange }: { question: { id: string; n
         {question.text}
       </p>
       <div className="flex flex-wrap gap-2">
-        {LIKERT_OPTIONS.map(opt => {
+        {question.options.map(opt => {
           const isSelected = value === opt.value;
           return (
             <button key={opt.value} onClick={() => onChange(opt.value)}
               className="flex-1 min-w-[56px] rounded-xl px-2 py-2.5 text-center transition-all duration-200 border-2"
               style={{
                 background: isSelected ? `hsl(${teal})` : `hsl(0 0% 100% / 0.08)`,
-                color: isSelected ? 'white' : 'white',
+                color: 'white',
                 borderColor: isSelected ? `hsl(${teal})` : `hsl(0 0% 100% / 0.25)`,
                 boxShadow: isSelected ? `0 4px 15px -4px hsl(${teal} / 0.5)` : 'none',
                 transform: isSelected ? 'scale(1.05)' : 'scale(1)',
               }}>
               <span className="block text-sm font-extrabold">{opt.value}</span>
-              <span className="block text-[9px] leading-tight mt-0.5 opacity-90 font-semibold">{opt.label}</span>
+              {!hideLegend && <span className="block text-[9px] leading-tight mt-0.5 opacity-90 font-semibold">{opt.label}</span>}
             </button>
           );
         })}
       </div>
+
+      {showPerpetrators && (
+        <div className="mt-4 pt-3 border-t" style={{ borderColor: `hsl(${slate} / 0.2)` }}>
+          <p className="text-xs font-semibold mb-2" style={{ color: `hsl(${tealLight})` }}>Quem praticou esse comportamento? (pode marcar mais de um)</p>
+          <div className="flex flex-wrap gap-2">
+            {COPSOQ_PERPETRATORS.map(p => {
+              const active = perpetrators.includes(p.id);
+              return (
+                <button key={p.id} type="button" onClick={() => togglePerpetrator(p.id)}
+                  className="rounded-full px-3 py-1.5 text-xs font-semibold border-2 transition-all"
+                  style={{
+                    background: active ? `hsl(${teal})` : `hsl(0 0% 100% / 0.06)`,
+                    color: 'white',
+                    borderColor: active ? `hsl(${teal})` : `hsl(0 0% 100% / 0.2)`,
+                  }}>
+                  {p.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
