@@ -491,7 +491,11 @@ export default function Forms() {
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span>{new Date(config.created_at).toLocaleDateString("pt-BR")}</span>
                       <span className="font-medium text-foreground">{count} respostas</span>
+                      <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-foreground uppercase tracking-wider">
+                        {methodologyLabel(normalizeMethodology((config as any).methodology))}
+                      </span>
                     </div>
+
                     <div className="flex items-center gap-1 pt-1 border-t border-border">
                       <button onClick={() => copyLink(config.id, config.company_name, config.link_token)} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><Copy className="h-3 w-3" /> Copiar</button>
                       <button onClick={() => refreshLink.mutate(config)} disabled={refreshLink.isPending} className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"><RefreshCw className={cn("h-3 w-3", refreshLink.isPending && "animate-spin")} /> Refresh</button>
