@@ -439,7 +439,14 @@ export default function Forms() {
                     const count = responseCounts[config.id] || 0;
                     return (
                       <tr key={config.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 font-medium text-foreground">{(config as any).form_title || config.company_name}</td>
+                        <td className="px-4 py-3 font-medium text-foreground">
+                          <div className="flex items-center gap-2">
+                            <span>{(config as any).form_title || config.company_name}</span>
+                            <span className="inline-flex items-center rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold text-accent-foreground uppercase tracking-wider shrink-0">
+                              {methodologyLabel(normalizeMethodology((config as any).methodology))}
+                            </span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-muted-foreground">{config.company_name}{(config as any).address_city ? ` — ${(config as any).address_city}` : ""}</td>
                         <td className="px-4 py-3 text-center text-xs text-muted-foreground">{new Date(config.created_at).toLocaleDateString("pt-BR")}</td>
                         <td className="px-4 py-3 text-center font-medium text-foreground">{count}</td>
