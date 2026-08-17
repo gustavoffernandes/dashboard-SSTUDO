@@ -146,6 +146,15 @@ export function useSurveyData() {
 
     if (r.answers) {
       Object.entries(r.answers).forEach(([key, cellValue]) => {
+        // Strategy 0: COPSOQ question ids (escala 0-4)
+        if (isCopsoqQuestionId(key)) {
+          const numValue = parseInt(String(cellValue), 10);
+          if (numValue >= 0 && numValue <= 4) {
+            formattedAnswers[key] = numValue;
+          }
+          return;
+        }
+
         // Strategy 1: Key is already a valid question ID (internal forms)
         if (VALID_QUESTION_IDS.has(key)) {
           const numValue = parseInt(String(cellValue), 10);
@@ -154,6 +163,7 @@ export function useSurveyData() {
           }
           return;
         }
+
 
         // Strategy 2: Try text-based value parsing for legacy data
         let numValue = parseInt(String(cellValue), 10);
