@@ -548,7 +548,16 @@ export default function Companies() {
                           <input type="number" value={editData.employee_count} onChange={e => setEditData({ ...editData, employee_count: e.target.value })}
                             className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary transition" min="1" />
                         </div>
+                        <div className="sm:col-span-2 space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Metodologia do Diagnóstico</label>
+                          <select value={editData.methodology} onChange={e => setEditData({ ...editData, methodology: e.target.value })}
+                            className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary transition">
+                            {METHODOLOGIES.map(m => <option key={m.id} value={m.id}>{m.label} — {m.questionCount} questões</option>)}
+                          </select>
+                          <p className="text-[10px] text-muted-foreground">A troca é bloqueada quando a empresa já possui respostas coletadas.</p>
+                        </div>
                       </div>
+
 
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Contato</h4>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
