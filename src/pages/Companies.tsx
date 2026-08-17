@@ -171,10 +171,26 @@ export default function Companies() {
         if (exists) throw new Error("Já existe uma empresa/filial cadastrada com este CNPJ e cidade");
       }
       const parsedEmployeeCount = data.employee_count ? Number(data.employee_count) : null;
+      const branchConfigIds = configs.filter((c: any) => c.cnpj === cnpj && normalizeCity(c.address_city) === normalizeCity(city)).map((c: any) => c.id);
+
+      // Trocar a metodologia é bloqueado quando já existem respostas coletadas
+      const currentMethodology = (configs.find((c: any) => c.cnpj === cnpj && normalizeCity(c.address_city) === normalizeCity(city) && c.spreadsheet_id === "__placeholder__") as any)?.methodology || "proart";
+      const newMethodology = data.methodology || "proart";
+      if (newMethodology !== currentMethodology && branchConfigIds.length > 0) {
+        const { count } = await supabase
+          .from("survey_responses")
+          .select("id", { count: "exact", head: true })
+          .in("config_id", branchConfigIds);
+        if ((count || 0) > 0) {
+          throw new Error("Não é possível trocar a metodologia: esta empresa já possui respostas coletadas. As respostas antigas não são comparáveis entre metodologias.");
+        }
+      }
+
       const updatePayload: any = {
         company_name: normalizedName,
         cnpj: newCnpjDigits,
         sector: data.sector?.trim() || null,
+        methodology: newMethodology,
         employee_count: parsedEmployeeCount,
         sectors: sectors as any,
         contact_name: data.contact_name || null,
@@ -185,8 +201,8 @@ export default function Companies() {
         address_state: data.address_state || null,
         address_zip: data.address_zip || null,
       };
-      const branchConfigIds = configs.filter((c: any) => c.cnpj === cnpj && normalizeCity(c.address_city) === normalizeCity(city)).map((c: any) => c.id);
       for (const cid of branchConfigIds) {
+
         const { error } = await (supabase.from("google_forms_config") as any).update(updatePayload).eq("id", cid);
         if (error) throw error;
       }
