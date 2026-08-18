@@ -8,10 +8,16 @@ import { useAuth } from "@/contexts/AuthContext";
 import { questions, sections } from "@/data/mockData";
 import { exportCompanyReport, exportComparisonReport, exportRawData } from "@/lib/exportUtils";
 import { exportCompanyPDF, exportComparisonPDF } from "@/lib/pdfExport";
+import { exportCompanyCopsoqPDF } from "@/lib/copsoqPdfExport";
+import {
+  COPSOQ_DOMAINS, COPSOQ_SCORABLE_DIMENSIONS, classifyCopsoq, copsoqClassLabel, copsoqBandsText,
+  dimensionAverage, dimensionScore, calculateCopsoqPxS, offensiveSummary,
+} from "@/lib/copsoqMethodology";
 import {
   PROART_SCALES, ALL_FACTORS, classifyRisk, getRiskLabel, getRiskColor, getRiskBgColor,
   calculatePxS, getPRLevelLabel, getPRLevelColor, getPRLevelBgColor, PXS_MATRIX, getMatrixCellPR,
 } from "@/lib/proartMethodology";
+
 import { Download, FileText, Building2, GitCompareArrows, Database, FileDown, Loader2, AlertOctagon, Target, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
