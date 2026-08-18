@@ -347,6 +347,7 @@ export default function ActionPlans() {
     pxs: ReturnType<typeof computeAnalysis>["pxs"],
     formPlans: typeof plans,
     respondentCount: number,
+    methodology: Methodology = "proart",
   ) => (
     <div key={formConfigId} className="space-y-4">
       {/* Form header */}
@@ -354,10 +355,14 @@ export default function ActionPlans() {
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-primary shrink-0" />
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-foreground">{formTitle}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-sm sm:text-base font-bold text-foreground">{formTitle}</h2>
+              <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary">{methodologyLabel(methodology)}</span>
+            </div>
             <p className="text-[10px] sm:text-xs text-muted-foreground">{respondentCount} respondente(s)</p>
           </div>
         </div>
+
         <div className={cn("rounded-lg px-3 py-1 text-center self-start", getPRLevelBgColor(pxs.prLevel))}>
           <span className={cn("text-xs font-bold", getPRLevelColor(pxs.prLevel))}>Risco P×S: {pxs.risk} — {getPRLevelLabel(pxs.prLevel)}</span>
         </div>
