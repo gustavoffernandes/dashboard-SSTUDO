@@ -96,40 +96,52 @@ export default function Heatmap() {
 
   type HeatmapColumn = { id: string; name: string };
   let columns: HeatmapColumn[];
-  let customGetQuestionAverage: (questionId: string, columnId?: string) => number;
+  let getPool: (columnId?: string) => typeof filteredRespondents;
 
   if (isSingleFormSelected) {
     const form = formConfigs.find(f => f.configId === selectedFormId);
-    const pool = filteredRespondents.filter(r => (r as any).configId === selectedFormId);
     columns = [{ id: selectedFormId, name: form?.title || "Formulário" }];
-    customGetQuestionAverage = (questionId: string) => {
-      const withAnswer = pool.filter(r => r.answers[questionId] !== undefined);
-      if (withAnswer.length === 0) return 0;
-      return Math.round((withAnswer.reduce((acc, r) => acc + (r.answers[questionId] || 0), 0) / withAnswer.length) * 100) / 100;
-    };
+    getPool = () => filteredRespondents.filter(r => (r as any).configId === selectedFormId);
   } else if (showFormColumns) {
     columns = companyFormsToShow.map(f => ({ id: f.configId, name: f.title }));
-    customGetQuestionAverage = (questionId: string, columnId?: string) => {
+    getPool = (columnId?: string) => {
       let pool = filteredRespondents.filter(r => r.companyId === selectedCompanies[0]);
       if (columnId) pool = pool.filter(r => (r as any).configId === columnId);
-      const withAnswer = pool.filter(r => r.answers[questionId] !== undefined);
-      if (withAnswer.length === 0) return 0;
-      return Math.round((withAnswer.reduce((acc, r) => acc + (r.answers[questionId] || 0), 0) / withAnswer.length) * 100) / 100;
+      return pool;
     };
   } else {
     const effectiveCompanies = selectedCompanies.length > 0
       ? companies.filter(c => selectedCompanies.includes(c.id))
       : companies;
     columns = effectiveCompanies.map(c => ({ id: c.id, name: c.name }));
-    customGetQuestionAverage = (questionId: string, columnId?: string) => {
+    getPool = (columnId?: string) => {
       let pool = filteredRespondents;
       if (columnId) pool = pool.filter(r => r.companyId === columnId);
       else if (selectedCompanies.length > 0) pool = pool.filter(r => selectedCompanies.includes(r.companyId));
-      const withAnswer = pool.filter(r => r.answers[questionId] !== undefined);
-      if (withAnswer.length === 0) return 0;
-      return Math.round((withAnswer.reduce((acc, r) => acc + (r.answers[questionId] || 0), 0) / withAnswer.length) * 100) / 100;
+      return pool;
     };
   }
+
+  const customGetQuestionAverage = (questionId: string, columnId?: string) => {
+    const withAnswer = getPool(columnId).filter(r => r.answers[questionId] !== undefined);
+    if (withAnswer.length === 0) return 0;
+    return Math.round((withAnswer.reduce((acc, r) => acc + (r.answers[questionId] || 0), 0) / withAnswer.length) * 100) / 100;
+  };
+
+  const getDimensionAverageForColumn = (dimensionId: string, columnId?: string) => {
+    const dim = getCopsoqDimension(dimensionId);
+    if (!dim) return 0;
+    return dimensionAverage(dim, getPool(columnId).map(r => ({ answers: r.answers })));
+  };
+
+  // Metodologia ativa: formulário selecionado > formulários da empresa selecionada > padrão
+  const methodologyForms = isSingleFormSelected
+    ? formConfigs.filter(f => f.configId === selectedFormId)
+    : selectedCompanies.length > 0
+      ? formConfigs.filter(f => selectedCompanies.includes(f.companyKey))
+      : formConfigs;
+  const isCopsoq = methodologyForms.length > 0 && methodologyForms.every(f => f.methodology === "copsoq");
+  const isMixed = methodologyForms.some(f => f.methodology === "copsoq") && methodologyForms.some(f => f.methodology !== "copsoq");
 
   // Build the question list from selected factors, restricted to questions with data.
   const availableQuestions = getAvailableQuestions();
@@ -139,6 +151,7 @@ export default function Heatmap() {
   const displayedQuestions = availableQuestions
     .filter(q => questionIdsFromFactors.has(q.id) && availableIds.has(q.id))
     .sort((a, b) => a.number - b.number);
+
 
   return (
     <DashboardLayout>
