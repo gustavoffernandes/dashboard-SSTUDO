@@ -486,10 +486,11 @@ export default function ActionPlans() {
 
         {/* Render the active form section only */}
         {companyForms.length > 0 && activeForm ? (
-          renderFormSection(activeForm.title, activeForm.configId, activeAnalysis.factorResults, activeAnalysis.pxs, activeFormPlans, activePool.length)
+          renderFormSection(activeForm.title, activeForm.configId, activeAnalysis.factorResults, activeAnalysis.pxs, activeFormPlans, activePool.length, activeMethodology)
         ) : fallbackAnalysis ? (
-          renderFormSection(company?.name || "Empresa", effectiveCompany, fallbackAnalysis.factorResults, fallbackAnalysis.pxs, fallbackPlans, allCompanyRespondents.length)
+          renderFormSection(company?.name || "Empresa", effectiveCompany, fallbackAnalysis.factorResults, fallbackAnalysis.pxs, fallbackPlans, allCompanyRespondents.length, activeMethodology)
         ) : (
+
           <div className="rounded-xl border border-border bg-card p-5 shadow-card text-center">
             <p className="text-sm text-muted-foreground">Nenhum formulário encontrado para esta empresa.</p>
           </div>
