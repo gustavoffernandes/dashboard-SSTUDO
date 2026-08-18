@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { HeatmapTable } from "@/components/dashboard/HeatmapTable";
+import { CopsoqHeatmapTable } from "@/components/dashboard/CopsoqHeatmapTable";
+import { CopsoqDimensionFilter } from "@/components/dashboard/CopsoqDimensionFilter";
 import { MultiSelectCompanies } from "@/components/dashboard/MultiSelectCompanies";
 import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
 import { FormFilter } from "@/components/dashboard/FormFilter";
@@ -11,6 +13,8 @@ import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Filter } from "lucide-react";
 import { ALL_FACTORS, PROART_SCALES } from "@/lib/proartMethodology";
+import { COPSOQ_DOMAINS, COPSOQ_DIMENSIONS, getCopsoqDimension, dimensionAverage } from "@/lib/copsoqMethodology";
+import { methodologyLabel } from "@/lib/methodology";
 import { cn } from "@/lib/utils";
 
 export default function Heatmap() {
@@ -22,6 +26,8 @@ export default function Heatmap() {
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [selectedScale, setSelectedScale] = useState<string>("all");
   const [selectedFactors, setSelectedFactors] = useState<string[]>(ALL_FACTORS.map(f => f.id));
+  const [selectedDomain, setSelectedDomain] = useState<string>("all");
+  const [selectedDimensions, setSelectedDimensions] = useState<string[]>(COPSOQ_DIMENSIONS.map(d => d.id));
 
   const handleScaleChange = (scaleId: string) => {
     setSelectedScale(scaleId);
@@ -32,7 +38,18 @@ export default function Heatmap() {
       setSelectedFactors(scale ? scale.factors.map(f => f.id) : []);
     }
   };
+
+  const handleDomainChange = (domainId: string) => {
+    setSelectedDomain(domainId);
+    if (domainId === "all") {
+      setSelectedDimensions(COPSOQ_DIMENSIONS.map(d => d.id));
+    } else {
+      const domain = COPSOQ_DOMAINS.find(d => d.id === domainId);
+      setSelectedDimensions(domain ? domain.dimensions.map(d => d.id) : []);
+    }
+  };
   const { isLoading, hasData, companies, respondents, formConfigs, getAvailableQuestions, getFormConfigsForCompany } = useSurveyData();
+
 
   const relevantForms = isCompanyUser && userCompanyId
     ? getFormConfigsForCompany(userCompanyId)
@@ -79,40 +96,52 @@ export default function Heatmap() {
 
   type HeatmapColumn = { id: string; name: string };
   let columns: HeatmapColumn[];
-  let customGetQuestionAverage: (questionId: string, columnId?: string) => number;
+  let getPool: (columnId?: string) => typeof filteredRespondents;
 
   if (isSingleFormSelected) {
     const form = formConfigs.find(f => f.configId === selectedFormId);
-    const pool = filteredRespondents.filter(r => (r as any).configId === selectedFormId);
     columns = [{ id: selectedFormId, name: form?.title || "Formulário" }];
-    customGetQuestionAverage = (questionId: string) => {
-      const withAnswer = pool.filter(r => r.answers[questionId] !== undefined);
-      if (withAnswer.length === 0) return 0;
-      return Math.round((withAnswer.reduce((acc, r) => acc + (r.answers[questionId] || 0), 0) / withAnswer.length) * 100) / 100;
-    };
+    getPool = () => filteredRespondents.filter(r => (r as any).configId === selectedFormId);
   } else if (showFormColumns) {
     columns = companyFormsToShow.map(f => ({ id: f.configId, name: f.title }));
-    customGetQuestionAverage = (questionId: string, columnId?: string) => {
+    getPool = (columnId?: string) => {
       let pool = filteredRespondents.filter(r => r.companyId === selectedCompanies[0]);
       if (columnId) pool = pool.filter(r => (r as any).configId === columnId);
-      const withAnswer = pool.filter(r => r.answers[questionId] !== undefined);
-      if (withAnswer.length === 0) return 0;
-      return Math.round((withAnswer.reduce((acc, r) => acc + (r.answers[questionId] || 0), 0) / withAnswer.length) * 100) / 100;
+      return pool;
     };
   } else {
     const effectiveCompanies = selectedCompanies.length > 0
       ? companies.filter(c => selectedCompanies.includes(c.id))
       : companies;
     columns = effectiveCompanies.map(c => ({ id: c.id, name: c.name }));
-    customGetQuestionAverage = (questionId: string, columnId?: string) => {
+    getPool = (columnId?: string) => {
       let pool = filteredRespondents;
       if (columnId) pool = pool.filter(r => r.companyId === columnId);
       else if (selectedCompanies.length > 0) pool = pool.filter(r => selectedCompanies.includes(r.companyId));
-      const withAnswer = pool.filter(r => r.answers[questionId] !== undefined);
-      if (withAnswer.length === 0) return 0;
-      return Math.round((withAnswer.reduce((acc, r) => acc + (r.answers[questionId] || 0), 0) / withAnswer.length) * 100) / 100;
+      return pool;
     };
   }
+
+  const customGetQuestionAverage = (questionId: string, columnId?: string) => {
+    const withAnswer = getPool(columnId).filter(r => r.answers[questionId] !== undefined);
+    if (withAnswer.length === 0) return 0;
+    return Math.round((withAnswer.reduce((acc, r) => acc + (r.answers[questionId] || 0), 0) / withAnswer.length) * 100) / 100;
+  };
+
+  const getDimensionAverageForColumn = (dimensionId: string, columnId?: string) => {
+    const dim = getCopsoqDimension(dimensionId);
+    if (!dim) return 0;
+    return dimensionAverage(dim, getPool(columnId).map(r => ({ answers: r.answers })));
+  };
+
+  // Metodologia ativa: formulário selecionado > formulários da empresa selecionada > padrão
+  const methodologyForms = isSingleFormSelected
+    ? formConfigs.filter(f => f.configId === selectedFormId)
+    : selectedCompanies.length > 0
+      ? formConfigs.filter(f => selectedCompanies.includes(f.companyKey))
+      : formConfigs;
+  const isCopsoq = methodologyForms.length > 0 && methodologyForms.every(f => f.methodology === "copsoq");
+  const isMixed = methodologyForms.some(f => f.methodology === "copsoq") && methodologyForms.some(f => f.methodology !== "copsoq");
 
   // Build the question list from selected factors, restricted to questions with data.
   const availableQuestions = getAvailableQuestions();
@@ -123,36 +152,55 @@ export default function Heatmap() {
     .filter(q => questionIdsFromFactors.has(q.id) && availableIds.has(q.id))
     .sort((a, b) => a.number - b.number);
 
+
   return (
     <DashboardLayout>
       <ErrorBoundary>
         <div className="animate-fade-in space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Heatmap de Satisfação</h1>
-            <p className="text-sm text-muted-foreground mt-1">Mapa de calor por fator PROART</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isCopsoq
+                ? "Mapa de calor por dimensão COPSOQ II-Br"
+                : "Mapa de calor por fator PROART"}
+            </p>
           </div>
 
-          {/* Scale tabs */}
+          {isMixed && (
+            <div className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-xs text-foreground">
+              A seleção atual mistura formulários PROART e COPSOQ II-Br. Selecione um formulário (ou empresas de mesma metodologia) para uma leitura correta — o heatmap está exibindo a metodologia {methodologyLabel(isCopsoq ? "copsoq" : "proart")}.
+            </div>
+          )}
+
+          {/* Blocos: escalas PROART ou domínios COPSOQ */}
           <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-card p-1 w-fit">
-            {[{ id: "all", label: "Todas as escalas" }, ...PROART_SCALES.map(s => ({ id: s.id, label: s.shortName }))].map(opt => (
-              <button
-                key={opt.id}
-                onClick={() => handleScaleChange(opt.id)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-semibold rounded-md transition-colors",
-                  selectedScale === opt.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-                title={opt.id === "all" ? "Mostrar todos os fatores" : PROART_SCALES.find(s => s.id === opt.id)?.name}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {(isCopsoq
+              ? [{ id: "all", label: "Todos os domínios", full: "Mostrar todas as dimensões" }, ...COPSOQ_DOMAINS.map(d => ({ id: d.id, label: d.shortName, full: d.name }))]
+              : [{ id: "all", label: "Todas as escalas", full: "Mostrar todos os fatores" }, ...PROART_SCALES.map(s => ({ id: s.id, label: s.shortName, full: s.name }))]
+            ).map(opt => {
+              const active = isCopsoq ? selectedDomain === opt.id : selectedScale === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => (isCopsoq ? handleDomainChange(opt.id) : handleScaleChange(opt.id))}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-semibold rounded-md transition-colors",
+                    active
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                  title={opt.full}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-            <FactorFilter selected={selectedFactors} onChange={setSelectedFactors} />
+            {isCopsoq
+              ? <CopsoqDimensionFilter selected={selectedDimensions} onChange={setSelectedDimensions} />
+              : <FactorFilter selected={selectedFactors} onChange={setSelectedFactors} />}
             {!isCompanyUser && <MultiSelectCompanies companies={companies} selected={selectedCompanies} onChange={(ids) => { setSelectedCompanies(ids); setSelectedFormId(""); }} />}
             <FormFilter forms={relevantForms} selectedFormId={selectedFormId} onChange={handleFormChange} />
             {availableSectors.length > 0 && (
@@ -172,7 +220,13 @@ export default function Heatmap() {
           </div>
 
 
-          {selectedFactors.length === 0 ? (
+          {isCopsoq ? (
+            <CopsoqHeatmapTable
+              dimensionIds={selectedDimensions}
+              columns={columns}
+              getDimensionAverage={getDimensionAverageForColumn}
+            />
+          ) : selectedFactors.length === 0 ? (
             <p className="text-sm text-muted-foreground">Selecione pelo menos um fator para visualizar o heatmap.</p>
           ) : (
             <HeatmapTable
@@ -181,6 +235,7 @@ export default function Heatmap() {
               getQuestionAverage={customGetQuestionAverage}
             />
           )}
+
         </div>
       </ErrorBoundary>
     </DashboardLayout>

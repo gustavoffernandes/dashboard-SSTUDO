@@ -7,8 +7,15 @@ import {
   PROART_SCALES, ALL_FACTORS, classifyRisk, getRiskLabel, getRiskColor, getRiskBgColor,
   calculatePxS, getPRLevelLabel, getPRLevelColor, getPRLevelBgColor,
   getSuggestedActions, PXS_MATRIX, getMatrixCellPR,
-  type PRLevel,
+  type PRLevel, type RiskLevel,
 } from "@/lib/proartMethodology";
+import {
+  COPSOQ_DIMENSIONS, COPSOQ_DOMAINS, COPSOQ_SCORABLE_DIMENSIONS,
+  classifyCopsoq, copsoqClassToRiskLevel, dimensionAverage, dimensionScore,
+  calculateCopsoqPxS, getCopsoqSuggestedActions,
+} from "@/lib/copsoqMethodology";
+import { methodologyLabel, type Methodology } from "@/lib/methodology";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Plus, CheckCircle2, Clock, AlertTriangle, Trash2, ChevronDown, ChevronUp, MessageSquare, Target, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,39 +43,80 @@ export default function ActionPlans() {
   const companyForms = getFormConfigsForCompany(effectiveCompany);
   const allCompanyRespondents = getCompanyRespondents(effectiveCompany);
 
-  // Helper: compute factor results and PxS for a given pool
-  const computeAnalysis = (pool: typeof respondents) => {
+  // Helper: compute factor/dimension results and PxS for a given pool, per methodology
+  const computeAnalysis = (pool: typeof respondents, methodology: Methodology = "proart") => {
+    if (methodology === "copsoq") {
+      const dimScores: Record<string, number> = {};
+      const factorResults = COPSOQ_DIMENSIONS.map(d => {
+        const avg = dimensionAverage(d, pool.map(r => ({ answers: r.answers })));
+        dimScores[d.id] = avg;
+        const cls = classifyCopsoq(d, avg);
+        return {
+          id: d.id,
+          name: d.name,
+          groupLabel: COPSOQ_DOMAINS.find(dom => dom.id === d.domainId)?.shortName || "",
+          avg: Math.round(avg * 100) / 100,
+          scoreLabel: d.scorable ? `${avg.toFixed(1)}/${d.maxScore}` : `${avg.toFixed(1)}`,
+          risk: d.scorable ? copsoqClassToRiskLevel(cls) : ("low" as RiskLevel),
+          scorable: d.scorable,
+        };
+      });
+      const highRiskCount = pool.filter(r =>
+        COPSOQ_SCORABLE_DIMENSIONS.some(d => {
+          const s = dimensionScore(d, r.answers);
+          return s !== null && classifyCopsoq(d, s) === "risco";
+        })
+      ).length;
+      const pxs = calculateCopsoqPxS(dimScores, pool.length, highRiskCount);
+      return { factorResults, pxs, methodology };
+    }
+
     const factorResults = ALL_FACTORS.map(f => {
       const qIds = f.questionIds;
       const answers = pool.flatMap(r => qIds.map(qId => r.answers[qId]).filter(v => v !== undefined));
       const avg = answers.length > 0 ? answers.reduce((a, b) => a + b, 0) / answers.length : 0;
       const risk = classifyRisk(avg, f.type);
-      return { ...f, avg: Math.round(avg * 100) / 100, risk };
+      return {
+        id: f.id,
+        name: f.name,
+        groupLabel: PROART_SCALES.find(s => s.id === f.scaleId)?.shortName || "",
+        avg: Math.round(avg * 100) / 100,
+        scoreLabel: (Math.round(avg * 100) / 100).toFixed(2),
+        risk,
+        scorable: true,
+        questionIds: f.questionIds,
+        type: f.type,
+      };
     });
-    const eotAvg = factorResults.filter(f => f.scaleId === "contexto").reduce((a, f) => a + f.avg, 0) / Math.max(1, factorResults.filter(f => f.scaleId === "contexto").length);
+    const byScale = (scaleId: string) => {
+      const list = ALL_FACTORS.filter(f => f.scaleId === scaleId).map(f => factorResults.find(r => r.id === f.id)?.avg || 0);
+      return list.length > 0 ? list.reduce((a, b) => a + b, 0) / list.length : 0;
+    };
+    const eotAvg = byScale("contexto");
     const eegColAvg = factorResults.find(f => f.id === "coletivista")?.avg || 0;
-    const eistAvg = factorResults.filter(f => f.scaleId === "vivencias").reduce((a, f) => a + f.avg, 0) / Math.max(1, factorResults.filter(f => f.scaleId === "vivencias").length);
-    const edtAvg = factorResults.filter(f => f.scaleId === "saude").reduce((a, f) => a + f.avg, 0) / Math.max(1, factorResults.filter(f => f.scaleId === "saude").length);
+    const eistAvg = byScale("vivencias");
+    const edtAvg = byScale("saude");
     const highRiskCount = pool.filter(r => {
-      const negAvgs = factorResults.filter(f => f.type === "negative").map(f => {
+      const negAvgs = ALL_FACTORS.filter(f => f.type === "negative").map(f => {
         const vals = f.questionIds.map(qId => r.answers[qId]).filter(v => v !== undefined);
         return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
       });
       return negAvgs.some(v => v >= 3.70);
     }).length;
     const pxs = calculatePxS(eotAvg, eegColAvg, eistAvg, edtAvg, pool.length, highRiskCount);
-    return { factorResults, pxs };
+    return { factorResults, pxs, methodology: "proart" as Methodology };
   };
 
   // Determine which form to show
   const activeFormId = selectedFormId || (companyForms.length > 0 ? companyForms[0].configId : "");
   const activeForm = companyForms.find(f => f.configId === activeFormId);
+  const activeMethodology: Methodology = activeForm?.methodology || companyForms[0]?.methodology || "proart";
 
   // Compute data for active form only
   const activePool = activeFormId
     ? allCompanyRespondents.filter(r => r.configId === activeFormId)
     : allCompanyRespondents;
-  const activeAnalysis = computeAnalysis(activePool);
+  const activeAnalysis = computeAnalysis(activePool, activeMethodology);
   const activeFormPlans = plans.filter(p => p.company_config_id === activeFormId);
 
   // Legacy plans
@@ -76,23 +124,30 @@ export default function ActionPlans() {
   const legacyPlans = plans.filter(p => p.company_config_id === effectiveCompany && !formConfigIds.has(p.company_config_id));
 
   // Fallback: if no forms exist
-  const fallbackAnalysis = companyForms.length === 0 ? computeAnalysis(allCompanyRespondents) : null;
+  const fallbackAnalysis = companyForms.length === 0 ? computeAnalysis(allCompanyRespondents, activeMethodology) : null;
   const fallbackPlans = companyForms.length === 0 ? plans.filter(p => p.company_config_id === effectiveCompany) : [];
 
-  const handleGeneratePlansForForm = async (formConfigId: string, factorResults: ReturnType<typeof computeAnalysis>["factorResults"], pxs: ReturnType<typeof computeAnalysis>["pxs"]) => {
+  const handleGeneratePlansForForm = async (
+    formConfigId: string,
+    factorResults: ReturnType<typeof computeAnalysis>["factorResults"],
+    pxs: ReturnType<typeof computeAnalysis>["pxs"],
+    methodology: Methodology,
+  ) => {
     if (!user || readOnly) return;
     const existingPlans = plans.filter(p => p.company_config_id === formConfigId);
-    const riskyFactors = factorResults.filter(f => f.risk === "high" || f.risk === "medium");
+    const riskyFactors = factorResults.filter(f => f.scorable && (f.risk === "high" || f.risk === "medium"));
     for (const factor of riskyFactors) {
       const existing = existingPlans.find(p => p.factor_id === factor.id);
       if (existing) continue;
-      const suggested = getSuggestedActions(factor.id, factor.risk);
+      const suggested = methodology === "copsoq"
+        ? getCopsoqSuggestedActions(factor.id, factor.risk)
+        : getSuggestedActions(factor.id, factor.risk);
       if (!suggested) continue;
       const plan = await createPlan({
         company_config_id: formConfigId,
         user_id: user.id,
         title: suggested.title,
-        description: `Fator: ${factor.name} | Média: ${factor.avg} | ${getRiskLabel(factor.risk)}`,
+        description: `${methodology === "copsoq" ? "Dimensão" : "Fator"}: ${factor.name} | ${methodology === "copsoq" ? "Pontuação" : "Média"}: ${factor.scoreLabel} | ${getRiskLabel(factor.risk)}`,
         factor_id: factor.id,
         risk_level: pxs.prLevel,
         risk_score: pxs.risk,
@@ -106,6 +161,7 @@ export default function ActionPlans() {
       }
     }
   };
+
 
   const getPlanProgress = (planId: string) => {
     const planTasks = tasks.filter(t => t.action_plan_id === planId);
@@ -291,6 +347,7 @@ export default function ActionPlans() {
     pxs: ReturnType<typeof computeAnalysis>["pxs"],
     formPlans: typeof plans,
     respondentCount: number,
+    methodology: Methodology = "proart",
   ) => (
     <div key={formConfigId} className="space-y-4">
       {/* Form header */}
@@ -298,10 +355,14 @@ export default function ActionPlans() {
         <div className="flex items-center gap-2">
           <FileText className="h-4 w-4 text-primary shrink-0" />
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-foreground">{formTitle}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-sm sm:text-base font-bold text-foreground">{formTitle}</h2>
+              <span className="text-[9px] font-bold uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary">{methodologyLabel(methodology)}</span>
+            </div>
             <p className="text-[10px] sm:text-xs text-muted-foreground">{respondentCount} respondente(s)</p>
           </div>
         </div>
+
         <div className={cn("rounded-lg px-3 py-1 text-center self-start", getPRLevelBgColor(pxs.prLevel))}>
           <span className={cn("text-xs font-bold", getPRLevelColor(pxs.prLevel))}>Risco P×S: {pxs.risk} — {getPRLevelLabel(pxs.prLevel)}</span>
         </div>
@@ -346,19 +407,27 @@ export default function ActionPlans() {
 
         {/* Factor diagnostics */}
         <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-card">
-          <h3 className="text-xs font-semibold text-card-foreground mb-3">Diagnóstico por Fator</h3>
+          <h3 className="text-xs font-semibold text-card-foreground mb-3">
+            {methodology === "copsoq" ? "Diagnóstico por Dimensão" : "Diagnóstico por Fator"}
+          </h3>
           <div className="space-y-1.5 max-h-64 overflow-y-auto">
             {factorResults.map(f => (
               <div key={f.id} className="flex items-center justify-between rounded-lg bg-muted/30 px-2 sm:px-3 py-1.5">
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] sm:text-xs font-medium text-foreground truncate">{f.name}</p>
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground">{PROART_SCALES.find(s => s.id === f.scaleId)?.shortName}</p>
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground">{f.groupLabel}</p>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                  <span className="text-xs sm:text-sm font-bold text-foreground">{f.avg.toFixed(2)}</span>
-                  <span className={cn("text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap", getRiskBgColor(f.risk), getRiskColor(f.risk))}>
-                    {getRiskLabel(f.risk)}
-                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-foreground">{f.scoreLabel}</span>
+                  {f.scorable ? (
+                    <span className={cn("text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap", getRiskBgColor(f.risk), getRiskColor(f.risk))}>
+                      {getRiskLabel(f.risk)}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap bg-muted text-muted-foreground">
+                      Sem classificação
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -369,7 +438,8 @@ export default function ActionPlans() {
       {/* Generate button */}
       {!readOnly && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-          <button onClick={() => handleGeneratePlansForForm(formConfigId, factorResults, pxs)} className="flex items-center gap-2 rounded-lg bg-primary px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+          <button onClick={() => handleGeneratePlansForForm(formConfigId, factorResults, pxs, methodology)} className="flex items-center gap-2 rounded-lg bg-primary px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+
             <Plus className="h-4 w-4" /> Gerar Plano de Ação
           </button>
           <span className="text-[10px] sm:text-xs text-muted-foreground">{formPlans.length} plano(s) criado(s)</span>
@@ -396,8 +466,9 @@ export default function ActionPlans() {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground">Plano de Ação</h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              {readOnly ? "Visualização dos planos de ação da sua empresa" : "Gestão de planos baseados no diagnóstico PROART — por formulário"}
+              {readOnly ? "Visualização dos planos de ação da sua empresa" : `Gestão de planos baseados no diagnóstico ${methodologyLabel(activeMethodology)} — por formulário`}
             </p>
+
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {!isCompanyUser && (
@@ -415,10 +486,11 @@ export default function ActionPlans() {
 
         {/* Render the active form section only */}
         {companyForms.length > 0 && activeForm ? (
-          renderFormSection(activeForm.title, activeForm.configId, activeAnalysis.factorResults, activeAnalysis.pxs, activeFormPlans, activePool.length)
+          renderFormSection(activeForm.title, activeForm.configId, activeAnalysis.factorResults, activeAnalysis.pxs, activeFormPlans, activePool.length, activeMethodology)
         ) : fallbackAnalysis ? (
-          renderFormSection(company?.name || "Empresa", effectiveCompany, fallbackAnalysis.factorResults, fallbackAnalysis.pxs, fallbackPlans, allCompanyRespondents.length)
+          renderFormSection(company?.name || "Empresa", effectiveCompany, fallbackAnalysis.factorResults, fallbackAnalysis.pxs, fallbackPlans, allCompanyRespondents.length, activeMethodology)
         ) : (
+
           <div className="rounded-xl border border-border bg-card p-5 shadow-card text-center">
             <p className="text-sm text-muted-foreground">Nenhum formulário encontrado para esta empresa.</p>
           </div>
