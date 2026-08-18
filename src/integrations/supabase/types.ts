@@ -707,6 +707,7 @@ export type Database = {
           instructions: string | null
           is_active: boolean | null
           is_anonymous: boolean | null
+          methodology: string | null
           require_consent: boolean | null
           require_password: boolean | null
           sector: string | null
@@ -725,6 +726,7 @@ export type Database = {
           instructions?: string | null
           is_active?: boolean | null
           is_anonymous?: boolean | null
+          methodology?: string | null
           require_consent?: boolean | null
           require_password?: boolean | null
           sector?: string | null
@@ -743,6 +745,7 @@ export type Database = {
           instructions?: string | null
           is_active?: boolean | null
           is_anonymous?: boolean | null
+          methodology?: string | null
           require_consent?: boolean | null
           require_password?: boolean | null
           sector?: string | null
