@@ -36,39 +36,80 @@ export default function ActionPlans() {
   const companyForms = getFormConfigsForCompany(effectiveCompany);
   const allCompanyRespondents = getCompanyRespondents(effectiveCompany);
 
-  // Helper: compute factor results and PxS for a given pool
-  const computeAnalysis = (pool: typeof respondents) => {
+  // Helper: compute factor/dimension results and PxS for a given pool, per methodology
+  const computeAnalysis = (pool: typeof respondents, methodology: Methodology = "proart") => {
+    if (methodology === "copsoq") {
+      const dimScores: Record<string, number> = {};
+      const factorResults = COPSOQ_DIMENSIONS.map(d => {
+        const avg = dimensionAverage(d, pool.map(r => ({ answers: r.answers })));
+        dimScores[d.id] = avg;
+        const cls = classifyCopsoq(d, avg);
+        return {
+          id: d.id,
+          name: d.name,
+          groupLabel: COPSOQ_DOMAINS.find(dom => dom.id === d.domainId)?.shortName || "",
+          avg: Math.round(avg * 100) / 100,
+          scoreLabel: d.scorable ? `${avg.toFixed(1)}/${d.maxScore}` : `${avg.toFixed(1)}`,
+          risk: d.scorable ? copsoqClassToRiskLevel(cls) : ("low" as RiskLevel),
+          scorable: d.scorable,
+        };
+      });
+      const highRiskCount = pool.filter(r =>
+        COPSOQ_SCORABLE_DIMENSIONS.some(d => {
+          const s = dimensionScore(d, r.answers);
+          return s !== null && classifyCopsoq(d, s) === "risco";
+        })
+      ).length;
+      const pxs = calculateCopsoqPxS(dimScores, pool.length, highRiskCount);
+      return { factorResults, pxs, methodology };
+    }
+
     const factorResults = ALL_FACTORS.map(f => {
       const qIds = f.questionIds;
       const answers = pool.flatMap(r => qIds.map(qId => r.answers[qId]).filter(v => v !== undefined));
       const avg = answers.length > 0 ? answers.reduce((a, b) => a + b, 0) / answers.length : 0;
       const risk = classifyRisk(avg, f.type);
-      return { ...f, avg: Math.round(avg * 100) / 100, risk };
+      return {
+        id: f.id,
+        name: f.name,
+        groupLabel: PROART_SCALES.find(s => s.id === f.scaleId)?.shortName || "",
+        avg: Math.round(avg * 100) / 100,
+        scoreLabel: (Math.round(avg * 100) / 100).toFixed(2),
+        risk,
+        scorable: true,
+        questionIds: f.questionIds,
+        type: f.type,
+      };
     });
-    const eotAvg = factorResults.filter(f => f.scaleId === "contexto").reduce((a, f) => a + f.avg, 0) / Math.max(1, factorResults.filter(f => f.scaleId === "contexto").length);
+    const byScale = (scaleId: string) => {
+      const list = ALL_FACTORS.filter(f => f.scaleId === scaleId).map(f => factorResults.find(r => r.id === f.id)?.avg || 0);
+      return list.length > 0 ? list.reduce((a, b) => a + b, 0) / list.length : 0;
+    };
+    const eotAvg = byScale("contexto");
     const eegColAvg = factorResults.find(f => f.id === "coletivista")?.avg || 0;
-    const eistAvg = factorResults.filter(f => f.scaleId === "vivencias").reduce((a, f) => a + f.avg, 0) / Math.max(1, factorResults.filter(f => f.scaleId === "vivencias").length);
-    const edtAvg = factorResults.filter(f => f.scaleId === "saude").reduce((a, f) => a + f.avg, 0) / Math.max(1, factorResults.filter(f => f.scaleId === "saude").length);
+    const eistAvg = byScale("vivencias");
+    const edtAvg = byScale("saude");
     const highRiskCount = pool.filter(r => {
-      const negAvgs = factorResults.filter(f => f.type === "negative").map(f => {
+      const negAvgs = ALL_FACTORS.filter(f => f.type === "negative").map(f => {
         const vals = f.questionIds.map(qId => r.answers[qId]).filter(v => v !== undefined);
         return vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
       });
       return negAvgs.some(v => v >= 3.70);
     }).length;
     const pxs = calculatePxS(eotAvg, eegColAvg, eistAvg, edtAvg, pool.length, highRiskCount);
-    return { factorResults, pxs };
+    return { factorResults, pxs, methodology: "proart" as Methodology };
   };
 
   // Determine which form to show
   const activeFormId = selectedFormId || (companyForms.length > 0 ? companyForms[0].configId : "");
   const activeForm = companyForms.find(f => f.configId === activeFormId);
+  const activeMethodology: Methodology = activeForm?.methodology || companyForms[0]?.methodology || "proart";
 
   // Compute data for active form only
   const activePool = activeFormId
     ? allCompanyRespondents.filter(r => r.configId === activeFormId)
     : allCompanyRespondents;
-  const activeAnalysis = computeAnalysis(activePool);
+  const activeAnalysis = computeAnalysis(activePool, activeMethodology);
   const activeFormPlans = plans.filter(p => p.company_config_id === activeFormId);
 
   // Legacy plans
@@ -76,23 +117,30 @@ export default function ActionPlans() {
   const legacyPlans = plans.filter(p => p.company_config_id === effectiveCompany && !formConfigIds.has(p.company_config_id));
 
   // Fallback: if no forms exist
-  const fallbackAnalysis = companyForms.length === 0 ? computeAnalysis(allCompanyRespondents) : null;
+  const fallbackAnalysis = companyForms.length === 0 ? computeAnalysis(allCompanyRespondents, activeMethodology) : null;
   const fallbackPlans = companyForms.length === 0 ? plans.filter(p => p.company_config_id === effectiveCompany) : [];
 
-  const handleGeneratePlansForForm = async (formConfigId: string, factorResults: ReturnType<typeof computeAnalysis>["factorResults"], pxs: ReturnType<typeof computeAnalysis>["pxs"]) => {
+  const handleGeneratePlansForForm = async (
+    formConfigId: string,
+    factorResults: ReturnType<typeof computeAnalysis>["factorResults"],
+    pxs: ReturnType<typeof computeAnalysis>["pxs"],
+    methodology: Methodology,
+  ) => {
     if (!user || readOnly) return;
     const existingPlans = plans.filter(p => p.company_config_id === formConfigId);
-    const riskyFactors = factorResults.filter(f => f.risk === "high" || f.risk === "medium");
+    const riskyFactors = factorResults.filter(f => f.scorable && (f.risk === "high" || f.risk === "medium"));
     for (const factor of riskyFactors) {
       const existing = existingPlans.find(p => p.factor_id === factor.id);
       if (existing) continue;
-      const suggested = getSuggestedActions(factor.id, factor.risk);
+      const suggested = methodology === "copsoq"
+        ? getCopsoqSuggestedActions(factor.id, factor.risk)
+        : getSuggestedActions(factor.id, factor.risk);
       if (!suggested) continue;
       const plan = await createPlan({
         company_config_id: formConfigId,
         user_id: user.id,
         title: suggested.title,
-        description: `Fator: ${factor.name} | Média: ${factor.avg} | ${getRiskLabel(factor.risk)}`,
+        description: `${methodology === "copsoq" ? "Dimensão" : "Fator"}: ${factor.name} | ${methodology === "copsoq" ? "Pontuação" : "Média"}: ${factor.scoreLabel} | ${getRiskLabel(factor.risk)}`,
         factor_id: factor.id,
         risk_level: pxs.prLevel,
         risk_score: pxs.risk,
@@ -106,6 +154,7 @@ export default function ActionPlans() {
       }
     }
   };
+
 
   const getPlanProgress = (planId: string) => {
     const planTasks = tasks.filter(t => t.action_plan_id === planId);
