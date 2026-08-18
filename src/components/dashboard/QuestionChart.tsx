@@ -37,13 +37,13 @@ const chartTypes: { type: ChartType; icon: typeof BarChart3; label: string }[] =
 
 import { getAnswerDistribution as mockGetAnswerDistribution } from "@/data/mockData";
 
-export function QuestionChart({ questionId, questionText, companyId, getAnswerDistribution }: QuestionChartProps) {
+export function QuestionChart({ questionId, questionText, companyId, getAnswerDistribution, valueLabels }: QuestionChartProps) {
   const [chartType, setChartType] = useState<ChartType>("bar");
   const isMobile = useIsMobile();
   const distFn = getAnswerDistribution || mockGetAnswerDistribution;
   const dist = distFn(questionId, companyId);
   const allData = dist.map((d) => ({
-    name: scaleLabels[d.value],
+    name: valueLabels?.[d.value] ?? scaleLabels[d.value],
     value: d.count,
     percentage: d.percentage,
     score: d.value,
