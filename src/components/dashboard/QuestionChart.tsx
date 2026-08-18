@@ -16,6 +16,8 @@ interface QuestionChartProps {
   questionText: string;
   companyId?: string;
   getAnswerDistribution?: (questionId: string, companyId?: string) => { value: number; count: number; percentage: number }[];
+  /** rótulos personalizados por valor (ex.: escala COPSOQ 0-4) */
+  valueLabels?: Record<number, string>;
 }
 
 const COLORS = [
