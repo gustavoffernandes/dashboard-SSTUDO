@@ -350,7 +350,7 @@ export default function Reports() {
 
           {/* Radar - Factors */}
           <div className="rounded-lg border border-border p-4 mb-5 min-w-0">
-            <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1"><Target className="h-3 w-3" /> Perfil Radar - 10 Fatores PROART</h4>
+            <h4 className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1"><Target className="h-3 w-3" /> {isCopsoq ? "Perfil Radar - 19 Dimensões COPSOQ II-Br (normalizado 0-5)" : "Perfil Radar - 10 Fatores PROART"}</h4>
             <ResponsiveChart height={280}>
               <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={chart.radarOuterRadius}>
                 <PolarGrid stroke="hsl(var(--border))" />
@@ -361,34 +361,94 @@ export default function Reports() {
             </ResponsiveChart>
           </div>
 
-          {/* Factor Table */}
-          <div className="overflow-x-auto mb-5">
-            <h4 className="text-xs font-semibold text-muted-foreground mb-2">Resultados por Fator (Metodologia PROART)</h4>
-            <table className="w-full text-sm">
-              <thead><tr className="border-b border-border">
-                <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Escala</th>
-                <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Fator</th>
-                <th className="px-4 py-2 text-center font-semibold text-muted-foreground">Tipo</th>
-                <th className="px-4 py-2 text-center font-semibold text-muted-foreground">Média</th>
-                <th className="px-4 py-2 text-center font-semibold text-muted-foreground">Classificação</th>
-              </tr></thead>
-              <tbody>
-                {PROART_SCALES.map(scale => scale.factors.map(f => {
-                  const result = factorResults.find(r => r.id === f.id);
-                  if (!result) return null;
-                  return (
-                    <tr key={f.id} className="border-b border-border/50">
-                      <td className="px-4 py-2 text-xs text-muted-foreground">{scale.shortName}</td>
-                      <td className="px-4 py-2 font-medium text-foreground">{f.name}</td>
-                      <td className="px-4 py-2 text-center"><span className={cn("text-[10px] px-2 py-0.5 rounded-full", f.type === "positive" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>{f.type === "positive" ? "Positiva" : "Negativa"}</span></td>
-                      <td className="px-4 py-2 text-center font-bold">{result.avg.toFixed(2)}</td>
-                      <td className="px-4 py-2 text-center"><RiskBadge value={result.avg} type={f.type} /></td>
-                    </tr>
-                  );
-                }))}
-              </tbody>
-            </table>
-          </div>
+          {/* Tabela de resultados por metodologia */}
+          {isCopsoq ? (
+            <>
+              <div className="overflow-x-auto mb-5">
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2">Resultados por Dimensão (Metodologia COPSOQ II-Br)</h4>
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-border">
+                    <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Domínio</th>
+                    <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Dimensão</th>
+                    <th className="px-4 py-2 text-center font-semibold text-muted-foreground">Pontuação</th>
+                    <th className="px-4 py-2 text-center font-semibold text-muted-foreground">Faixas (S / A / R)</th>
+                    <th className="px-4 py-2 text-center font-semibold text-muted-foreground">Classificação</th>
+                  </tr></thead>
+                  <tbody>
+                    {COPSOQ_DOMAINS.map(domain => domain.dimensions.filter(d => d.scorable).map(d => {
+                      const avg = copsoqAvgs[d.id] || 0;
+                      const cls = classifyCopsoq(d, avg);
+                      const bands = copsoqBandsText(d);
+                      return (
+                        <tr key={d.id} className="border-b border-border/50">
+                          <td className="px-4 py-2 text-xs text-muted-foreground">{domain.shortName}</td>
+                          <td className="px-4 py-2 font-medium text-foreground">{d.name}</td>
+                          <td className="px-4 py-2 text-center font-bold">{avg.toFixed(2)} <span className="text-xs font-normal text-muted-foreground">/ {d.maxScore}</span></td>
+                          <td className="px-4 py-2 text-center text-[10px] text-muted-foreground">{bands.safe} / {bands.attention} / {bands.risk}</td>
+                          <td className="px-4 py-2 text-center">
+                            <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-semibold",
+                              cls === "seguro" ? "bg-success/15 text-success" : cls === "atencao" ? "bg-warning/15 text-warning" : "bg-destructive/15 text-destructive")}>
+                              {copsoqClassLabel(cls)}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    }))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Comportamentos ofensivos */}
+              <div className="rounded-lg border border-border p-4 mb-5">
+                <h4 className="text-xs font-semibold text-muted-foreground mb-3">Comportamentos Ofensivos (últimos 12 meses)</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {offensive.map(o => (
+                    <div key={o.dimension.id} className={cn("rounded-lg border p-3", o.exposed > 0 ? "border-destructive/30 bg-destructive/5" : "border-border bg-muted/30")}>
+                      <p className="text-xs font-semibold text-foreground">{o.dimension.name}</p>
+                      <p className="text-2xl font-bold text-foreground mt-1">{o.pctExposed}%</p>
+                      <p className="text-[11px] text-muted-foreground">{o.exposed} de {o.total} relataram exposição</p>
+                      {o.frequent > 0 && (
+                        <p className="text-[11px] font-semibold text-destructive mt-1">{o.frequent} com frequência semanal/diária</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-3">
+                  Comportamentos ofensivos não recebem classificação de risco por faixas. Qualquer relato exige acolhimento imediato,
+                  apuração com sigilo e divulgação dos canais de denúncia.
+                </p>
+              </div>
+            </>
+          ) : (
+            <div className="overflow-x-auto mb-5">
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Resultados por Fator (Metodologia PROART)</h4>
+              <table className="w-full text-sm">
+                <thead><tr className="border-b border-border">
+                  <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Escala</th>
+                  <th className="px-4 py-2 text-left font-semibold text-muted-foreground">Fator</th>
+                  <th className="px-4 py-2 text-center font-semibold text-muted-foreground">Tipo</th>
+                  <th className="px-4 py-2 text-center font-semibold text-muted-foreground">Média</th>
+                  <th className="px-4 py-2 text-center font-semibold text-muted-foreground">Classificação</th>
+                </tr></thead>
+                <tbody>
+                  {PROART_SCALES.map(scale => scale.factors.map(f => {
+                    const result = factorResults.find(r => r.id === f.id);
+                    if (!result) return null;
+                    return (
+                      <tr key={f.id} className="border-b border-border/50">
+                        <td className="px-4 py-2 text-xs text-muted-foreground">{scale.shortName}</td>
+                        <td className="px-4 py-2 font-medium text-foreground">{f.name}</td>
+                        <td className="px-4 py-2 text-center"><span className={cn("text-[10px] px-2 py-0.5 rounded-full", f.type === "positive" ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive")}>{f.type === "positive" ? "Positiva" : "Negativa"}</span></td>
+                        <td className="px-4 py-2 text-center font-bold">{result.avg.toFixed(2)}</td>
+                        <td className="px-4 py-2 text-center"><RiskBadge value={result.avg} type={f.type} /></td>
+                      </tr>
+                    );
+                  }))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
 
           {/* P×S Matrix Mini */}
           <div className="rounded-lg border border-border p-4 mb-5">
