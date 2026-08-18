@@ -407,19 +407,27 @@ export default function ActionPlans() {
 
         {/* Factor diagnostics */}
         <div className="rounded-xl border border-border bg-card p-3 sm:p-4 shadow-card">
-          <h3 className="text-xs font-semibold text-card-foreground mb-3">Diagnóstico por Fator</h3>
+          <h3 className="text-xs font-semibold text-card-foreground mb-3">
+            {methodology === "copsoq" ? "Diagnóstico por Dimensão" : "Diagnóstico por Fator"}
+          </h3>
           <div className="space-y-1.5 max-h-64 overflow-y-auto">
             {factorResults.map(f => (
               <div key={f.id} className="flex items-center justify-between rounded-lg bg-muted/30 px-2 sm:px-3 py-1.5">
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] sm:text-xs font-medium text-foreground truncate">{f.name}</p>
-                  <p className="text-[9px] sm:text-[10px] text-muted-foreground">{PROART_SCALES.find(s => s.id === f.scaleId)?.shortName}</p>
+                  <p className="text-[9px] sm:text-[10px] text-muted-foreground">{f.groupLabel}</p>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                  <span className="text-xs sm:text-sm font-bold text-foreground">{f.avg.toFixed(2)}</span>
-                  <span className={cn("text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap", getRiskBgColor(f.risk), getRiskColor(f.risk))}>
-                    {getRiskLabel(f.risk)}
-                  </span>
+                  <span className="text-xs sm:text-sm font-bold text-foreground">{f.scoreLabel}</span>
+                  {f.scorable ? (
+                    <span className={cn("text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap", getRiskBgColor(f.risk), getRiskColor(f.risk))}>
+                      {getRiskLabel(f.risk)}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap bg-muted text-muted-foreground">
+                      Sem classificação
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -430,7 +438,8 @@ export default function ActionPlans() {
       {/* Generate button */}
       {!readOnly && (
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-          <button onClick={() => handleGeneratePlansForForm(formConfigId, factorResults, pxs)} className="flex items-center gap-2 rounded-lg bg-primary px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+          <button onClick={() => handleGeneratePlansForForm(formConfigId, factorResults, pxs, methodology)} className="flex items-center gap-2 rounded-lg bg-primary px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+
             <Plus className="h-4 w-4" /> Gerar Plano de Ação
           </button>
           <span className="text-[10px] sm:text-xs text-muted-foreground">{formPlans.length} plano(s) criado(s)</span>
