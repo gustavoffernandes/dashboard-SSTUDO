@@ -159,30 +159,48 @@ export default function Heatmap() {
         <div className="animate-fade-in space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Heatmap de Satisfação</h1>
-            <p className="text-sm text-muted-foreground mt-1">Mapa de calor por fator PROART</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {isCopsoq
+                ? "Mapa de calor por dimensão COPSOQ II-Br"
+                : "Mapa de calor por fator PROART"}
+            </p>
           </div>
 
-          {/* Scale tabs */}
+          {isMixed && (
+            <div className="rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-xs text-foreground">
+              A seleção atual mistura formulários PROART e COPSOQ II-Br. Selecione um formulário (ou empresas de mesma metodologia) para uma leitura correta — o heatmap está exibindo a metodologia {methodologyLabel(isCopsoq ? "copsoq" : "proart")}.
+            </div>
+          )}
+
+          {/* Blocos: escalas PROART ou domínios COPSOQ */}
           <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border bg-card p-1 w-fit">
-            {[{ id: "all", label: "Todas as escalas" }, ...PROART_SCALES.map(s => ({ id: s.id, label: s.shortName }))].map(opt => (
-              <button
-                key={opt.id}
-                onClick={() => handleScaleChange(opt.id)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-semibold rounded-md transition-colors",
-                  selectedScale === opt.id
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-                title={opt.id === "all" ? "Mostrar todos os fatores" : PROART_SCALES.find(s => s.id === opt.id)?.name}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {(isCopsoq
+              ? [{ id: "all", label: "Todos os domínios", full: "Mostrar todas as dimensões" }, ...COPSOQ_DOMAINS.map(d => ({ id: d.id, label: d.shortName, full: d.name }))]
+              : [{ id: "all", label: "Todas as escalas", full: "Mostrar todos os fatores" }, ...PROART_SCALES.map(s => ({ id: s.id, label: s.shortName, full: s.name }))]
+            ).map(opt => {
+              const active = isCopsoq ? selectedDomain === opt.id : selectedScale === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  onClick={() => (isCopsoq ? handleDomainChange(opt.id) : handleScaleChange(opt.id))}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-semibold rounded-md transition-colors",
+                    active
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                  title={opt.full}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
           </div>
 
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3">
-            <FactorFilter selected={selectedFactors} onChange={setSelectedFactors} />
+            {isCopsoq
+              ? <CopsoqDimensionFilter selected={selectedDimensions} onChange={setSelectedDimensions} />
+              : <FactorFilter selected={selectedFactors} onChange={setSelectedFactors} />}
             {!isCompanyUser && <MultiSelectCompanies companies={companies} selected={selectedCompanies} onChange={(ids) => { setSelectedCompanies(ids); setSelectedFormId(""); }} />}
             <FormFilter forms={relevantForms} selectedFormId={selectedFormId} onChange={handleFormChange} />
             {availableSectors.length > 0 && (
@@ -202,7 +220,13 @@ export default function Heatmap() {
           </div>
 
 
-          {selectedFactors.length === 0 ? (
+          {isCopsoq ? (
+            <CopsoqHeatmapTable
+              dimensionIds={selectedDimensions}
+              columns={columns}
+              getDimensionAverage={getDimensionAverageForColumn}
+            />
+          ) : selectedFactors.length === 0 ? (
             <p className="text-sm text-muted-foreground">Selecione pelo menos um fator para visualizar o heatmap.</p>
           ) : (
             <HeatmapTable
@@ -211,6 +235,7 @@ export default function Heatmap() {
               getQuestionAverage={customGetQuestionAverage}
             />
           )}
+
         </div>
       </ErrorBoundary>
     </DashboardLayout>
