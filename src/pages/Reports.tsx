@@ -163,13 +163,36 @@ export default function Reports() {
       return vals.length > 0 && (vals.reduce((a, b) => a + b, 0) / vals.length) >= 3.70;
     });
   }).length;
-  const pxs = calculatePxS(eotAvg, eegColAvg, eistAvg, edtAvg, pool.length, highRiskCount);
+  const proartPxs = calculatePxS(eotAvg, eegColAvg, eistAvg, edtAvg, pool.length, highRiskCount);
+
+  // ===== COPSOQ II-Br =====
+  const isCopsoq = companyForms.length > 0 && (selectedFormId
+    ? companyForms.find(f => f.configId === selectedFormId)?.methodology === "copsoq"
+    : companyForms.every(f => f.methodology === "copsoq"));
+
+  const copsoqBags = pool.map(r => ({ answers: r.answers }));
+  const copsoqAvgs: Record<string, number> = {};
+  COPSOQ_SCORABLE_DIMENSIONS.forEach(d => { copsoqAvgs[d.id] = dimensionAverage(d, copsoqBags); });
+  const copsoqHighRisk = copsoqBags.filter(b => COPSOQ_SCORABLE_DIMENSIONS.some(d => {
+    const s = dimensionScore(d, b.answers);
+    return s !== null && classifyCopsoq(d, s) === "risco";
+  })).length;
+  const copsoqPxs = calculateCopsoqPxS(copsoqAvgs, copsoqBags.length, copsoqHighRisk);
+  const offensive = offensiveSummary(copsoqBags);
+
+  const pxs = isCopsoq ? copsoqPxs : proartPxs;
 
   // Radar data
-  const radarData = ALL_FACTORS.map(f => {
-    const result = factorResults.find(r => r.id === f.id);
-    return { subject: f.shortName, valor: result?.avg || 0 };
-  });
+  const radarData = isCopsoq
+    ? COPSOQ_SCORABLE_DIMENSIONS.map(d => ({
+        subject: d.shortName,
+        valor: d.maxScore > 0 ? Math.round(((copsoqAvgs[d.id] || 0) / d.maxScore) * 5 * 100) / 100 : 0,
+      }))
+    : ALL_FACTORS.map(f => {
+        const result = factorResults.find(r => r.id === f.id);
+        return { subject: f.shortName, valor: result?.avg || 0 };
+      });
+
 
   // Sector breakdown (filtered by selected form)
   const sectorAvgs = [...new Set(pool.map(r => r.sector))].sort().map(sector => {
