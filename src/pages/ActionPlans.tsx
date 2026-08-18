@@ -7,8 +7,15 @@ import {
   PROART_SCALES, ALL_FACTORS, classifyRisk, getRiskLabel, getRiskColor, getRiskBgColor,
   calculatePxS, getPRLevelLabel, getPRLevelColor, getPRLevelBgColor,
   getSuggestedActions, PXS_MATRIX, getMatrixCellPR,
-  type PRLevel,
+  type PRLevel, type RiskLevel,
 } from "@/lib/proartMethodology";
+import {
+  COPSOQ_DIMENSIONS, COPSOQ_DOMAINS, COPSOQ_SCORABLE_DIMENSIONS,
+  classifyCopsoq, copsoqClassToRiskLevel, dimensionAverage, dimensionScore,
+  calculateCopsoqPxS, getCopsoqSuggestedActions,
+} from "@/lib/copsoqMethodology";
+import { methodologyLabel, type Methodology } from "@/lib/methodology";
+
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Plus, CheckCircle2, Clock, AlertTriangle, Trash2, ChevronDown, ChevronUp, MessageSquare, Target, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
