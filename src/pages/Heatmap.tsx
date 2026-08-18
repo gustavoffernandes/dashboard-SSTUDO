@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { HeatmapTable } from "@/components/dashboard/HeatmapTable";
+import { CopsoqHeatmapTable } from "@/components/dashboard/CopsoqHeatmapTable";
+import { CopsoqDimensionFilter } from "@/components/dashboard/CopsoqDimensionFilter";
 import { MultiSelectCompanies } from "@/components/dashboard/MultiSelectCompanies";
 import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
 import { FormFilter } from "@/components/dashboard/FormFilter";
@@ -11,6 +13,8 @@ import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Filter } from "lucide-react";
 import { ALL_FACTORS, PROART_SCALES } from "@/lib/proartMethodology";
+import { COPSOQ_DOMAINS, COPSOQ_DIMENSIONS, getCopsoqDimension, dimensionAverage } from "@/lib/copsoqMethodology";
+import { methodologyLabel } from "@/lib/methodology";
 import { cn } from "@/lib/utils";
 
 export default function Heatmap() {
@@ -22,6 +26,8 @@ export default function Heatmap() {
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [selectedScale, setSelectedScale] = useState<string>("all");
   const [selectedFactors, setSelectedFactors] = useState<string[]>(ALL_FACTORS.map(f => f.id));
+  const [selectedDomain, setSelectedDomain] = useState<string>("all");
+  const [selectedDimensions, setSelectedDimensions] = useState<string[]>(COPSOQ_DIMENSIONS.map(d => d.id));
 
   const handleScaleChange = (scaleId: string) => {
     setSelectedScale(scaleId);
@@ -32,7 +38,18 @@ export default function Heatmap() {
       setSelectedFactors(scale ? scale.factors.map(f => f.id) : []);
     }
   };
+
+  const handleDomainChange = (domainId: string) => {
+    setSelectedDomain(domainId);
+    if (domainId === "all") {
+      setSelectedDimensions(COPSOQ_DIMENSIONS.map(d => d.id));
+    } else {
+      const domain = COPSOQ_DOMAINS.find(d => d.id === domainId);
+      setSelectedDimensions(domain ? domain.dimensions.map(d => d.id) : []);
+    }
+  };
   const { isLoading, hasData, companies, respondents, formConfigs, getAvailableQuestions, getFormConfigsForCompany } = useSurveyData();
+
 
   const relevantForms = isCompanyUser && userCompanyId
     ? getFormConfigsForCompany(userCompanyId)
