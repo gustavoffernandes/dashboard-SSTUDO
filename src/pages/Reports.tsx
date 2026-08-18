@@ -263,7 +263,7 @@ export default function Reports() {
   return (
     <DashboardLayout>
       <div className="animate-fade-in space-y-6">
-        <div><h1 className="text-2xl font-bold text-foreground">Relatórios & Exportação</h1><p className="text-sm text-muted-foreground mt-1">Relatórios baseados no Protocolo PROART (Facas/UnB)</p></div>
+        <div><h1 className="text-2xl font-bold text-foreground">Relatórios & Exportação</h1><p className="text-sm text-muted-foreground mt-1">{isCopsoq ? "Relatórios baseados no COPSOQ II-Br (versão curta)" : "Relatórios baseados no Protocolo PROART (Facas/UnB)"}</p></div>
 
         {/* Empresas Críticas */}
         {criticalCompanies.length > 0 && (
