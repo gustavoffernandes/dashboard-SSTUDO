@@ -466,8 +466,9 @@ export default function ActionPlans() {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground">Plano de Ação</h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              {readOnly ? "Visualização dos planos de ação da sua empresa" : "Gestão de planos baseados no diagnóstico PROART — por formulário"}
+              {readOnly ? "Visualização dos planos de ação da sua empresa" : `Gestão de planos baseados no diagnóstico ${methodologyLabel(activeMethodology)} — por formulário`}
             </p>
+
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             {!isCompanyUser && (
