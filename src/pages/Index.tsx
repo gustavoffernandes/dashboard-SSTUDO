@@ -6,7 +6,7 @@ import { ResponsiveChart, useChartConfig } from "@/components/dashboard/Responsi
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useActionPlans } from "@/hooks/useActionPlans";
 import { useAuth } from "@/contexts/AuthContext";
-import { availableSectionsForPool, sectionAverageForPool } from "@/lib/unifiedAnalysis";
+import { questions } from "@/data/mockData";
 import {
   PROART_SCALES, ALL_FACTORS, classifyRisk, getRiskLabel, getRiskColor, getRiskBgColor,
   calculatePxS, getPRLevelLabel, getPRLevelColor, getPRLevelBgColor,
@@ -62,20 +62,11 @@ export default function Index() {
 
   const totalRespondents = dateFiltered.length;
   const totalCompanies = companies.length;
-  // Média por empresa considerando apenas as seções da metodologia usada por ela
-  const poolAverage = (pool: { answers: Record<string, number> }[]) => {
-    const secs = availableSectionsForPool(pool);
-    if (secs.length === 0) return 0;
-    const vals = secs.map(s => sectionAverageForPool(s.id, pool)).filter(v => v > 0);
-    if (vals.length === 0) return 0;
-    return Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) / 100;
-  };
-
-  const overallAvg = poolAverage(dateFiltered);
+  const overallAvg = availableSections.length > 0 ? availableSections.reduce((acc, s) => acc + getSectionAverage(s.id), 0) / availableSections.length : 0;
 
   const companyRanking = companies.map((c) => {
-    const pool = getCompanyRespondents(c.id);
-    return { ...c, average: poolAverage(pool), respondentCount: pool.length };
+    const avg = availableSections.length > 0 ? availableSections.reduce((acc, s) => acc + getSectionAverage(s.id, c.id), 0) / availableSections.length : 0;
+    return { ...c, average: Math.round(avg * 100) / 100, respondentCount: getCompanyRespondents(c.id).length };
   }).sort((a, b) => b.average - a.average);
 
   const benchmarkData = companies.map((c) => {
@@ -107,7 +98,16 @@ export default function Index() {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}` <= month;
       });
       if (monthRespondents.length === 0) return;
-      row[c.name.split(" ")[0]] = poolAverage(monthRespondents);
+      const avg = availableSections.reduce((acc, s) => {
+        const qs = questions.filter(q => q.section === s.id);
+        const qsWithData = qs.filter(q => monthRespondents.some(r => r.answers[q.id] !== undefined));
+        if (qsWithData.length === 0) return acc;
+        return acc + qsWithData.reduce((a, q) => {
+          const withAns = monthRespondents.filter(r => r.answers[q.id] !== undefined);
+          return a + (withAns.length > 0 ? withAns.reduce((x, r) => x + r.answers[q.id], 0) / withAns.length : 0);
+        }, 0) / qsWithData.length;
+      }, 0) / availableSections.length;
+      row[c.name.split(" ")[0]] = Math.round(avg * 100) / 100;
     });
     return row;
   });
@@ -130,7 +130,7 @@ export default function Index() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {!isCompanyUser && <KPICard title="Empresas Ativas" value={totalCompanies} subtitle="configuradas" sparkData={[totalCompanies]} color="hsl(217, 71%, 45%)" />}
           <KPICard title="Total Respostas" value={totalRespondents} subtitle="respondentes" sparkData={[totalRespondents]} color="hsl(170, 60%, 45%)" />
-          <KPICard title="Média Geral" value={overallAvg.toFixed(2)} subtitle="escala 0-5 (maior = melhor)" sparkData={[overallAvg]} color="hsl(38, 92%, 55%)" />
+          <KPICard title="Média Geral" value={overallAvg.toFixed(2)} subtitle="escala 1-5" sparkData={[overallAvg]} color="hsl(38, 92%, 55%)" />
           <KPICard title="Formulários Criados" value={formConfigs?.length || 0} subtitle="pesquisas cadastradas" sparkData={[formConfigs?.length || 0]} color="hsl(280, 60%, 55%)" />
         </div>
 

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ResponsiveChart, useChartConfig } from "@/components/dashboard/ResponsiveChart";
-import { sectionAverageForPool } from "@/lib/unifiedAnalysis";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useAuth } from "@/contexts/AuthContext";
 import { questions } from "@/data/mockData";
@@ -46,7 +45,14 @@ export default function TemporalEvolution() {
   const formSectionData = formEntries.map(([configId, { title, respondents: pool }]) => {
     const sectionAvgs: Record<string, number> = {};
     availableSections.forEach(s => {
-      sectionAvgs[s.shortName] = sectionAverageForPool(s.id, pool);
+      const qs = questions.filter(q => q.section === s.id);
+      const qsWithData = qs.filter(q => pool.some(r => r.answers[q.id] !== undefined));
+      if (qsWithData.length === 0) { sectionAvgs[s.shortName] = 0; return; }
+      const avg = qsWithData.reduce((acc, q) => {
+        const withAns = pool.filter(r => r.answers[q.id] !== undefined);
+        return acc + (withAns.length > 0 ? withAns.reduce((a, r) => a + r.answers[q.id], 0) / withAns.length : 0);
+      }, 0) / qsWithData.length;
+      sectionAvgs[s.shortName] = Math.round(avg * 100) / 100;
     });
     return { configId, title, count: pool.length, sectionAvgs };
   });
@@ -107,7 +113,14 @@ export default function TemporalEvolution() {
         const pool = respondents.filter(r => r.configId === f.configId);
         const sectionAvgs: Record<string, number> = {};
         availableSections.forEach(s => {
-          sectionAvgs[s.shortName] = sectionAverageForPool(s.id, pool);
+          const qs = questions.filter(q => q.section === s.id);
+          const qsWithData = qs.filter(q => pool.some(r => r.answers[q.id] !== undefined));
+          if (qsWithData.length === 0) { sectionAvgs[s.shortName] = 0; return; }
+          const avg = qsWithData.reduce((acc, q) => {
+            const withAns = pool.filter(r => r.answers[q.id] !== undefined);
+            return acc + (withAns.length > 0 ? withAns.reduce((a, r) => a + r.answers[q.id], 0) / withAns.length : 0);
+          }, 0) / qsWithData.length;
+          sectionAvgs[s.shortName] = Math.round(avg * 100) / 100;
         });
         return { label: `${c.name.split(" ")[0]} - ${f.title.length > 15 ? f.title.substring(0, 12) + "..." : f.title}`, sectionAvgs, count: pool.length };
       }).filter(f => f.count > 0);

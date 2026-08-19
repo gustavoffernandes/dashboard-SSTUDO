@@ -14,10 +14,6 @@ import {
   dimensionAverage, dimensionScore, calculateCopsoqPxS, offensiveSummary,
 } from "@/lib/copsoqMethodology";
 import {
-  COPSOQ_SECTIONS, copsoqSectionId, isCopsoqSectionId, copsoqDomainIdFromSection,
-  copsoqDomainIndex, copsoqFavorabilityIndex,
-} from "@/lib/unifiedAnalysis";
-import {
   PROART_SCALES, ALL_FACTORS, classifyRisk, getRiskLabel, getRiskColor, getRiskBgColor,
   calculatePxS, getPRLevelLabel, getPRLevelColor, getPRLevelBgColor, PXS_MATRIX, getMatrixCellPR,
 } from "@/lib/proartMethodology";
@@ -113,16 +109,9 @@ export default function Reports() {
   };
 
   const availableQuestionsList = getAvailableQuestionsFromPool(pool);
-  const availableSectionsForPool = [
-    ...sections.filter(s => availableQuestionsList.some(q => q.section === s.id)),
-    ...COPSOQ_SECTIONS.filter(s => {
-      const domain = COPSOQ_DOMAINS.find(d => copsoqSectionId(d.id) === s.id);
-      return !!domain && domain.dimensions.some(dim => dim.questionIds.some(qid => pool.some(r => r.answers[qid] !== undefined)));
-    }),
-  ];
+  const availableSectionsForPool = sections.filter(s => availableQuestionsList.some(q => q.section === s.id));
 
   const getSectionAverageFromPool = (sectionId: string, targetPool: typeof pool): number => {
-    if (isCopsoqSectionId(sectionId)) return copsoqDomainIndex(copsoqDomainIdFromSection(sectionId), targetPool);
     const sectionQuestions = questions.filter(q => q.section === sectionId);
     if (sectionQuestions.length === 0 || targetPool.length === 0) return 0;
 
@@ -197,7 +186,7 @@ export default function Reports() {
   const radarData = isCopsoq
     ? COPSOQ_SCORABLE_DIMENSIONS.map(d => ({
         subject: d.shortName,
-        valor: copsoqFavorabilityIndex(d, copsoqAvgs[d.id] || 0),
+        valor: d.maxScore > 0 ? Math.round(((copsoqAvgs[d.id] || 0) / d.maxScore) * 5 * 100) / 100 : 0,
       }))
     : ALL_FACTORS.map(f => {
         const result = factorResults.find(r => r.id === f.id);
