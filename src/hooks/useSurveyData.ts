@@ -3,6 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { questions, sections, type Respondent, type Company } from "@/data/mockData";
 import { isCopsoqQuestionId, normalizeMethodology, type Methodology } from "@/lib/methodology";
+import {
+  COPSOQ_SECTIONS,
+  copsoqDomainIdFromSection,
+  copsoqDomainIndex,
+  isCopsoqSectionId,
+  poolHasCopsoq,
+} from "@/lib/unifiedAnalysis";
+import { COPSOQ_DOMAINS } from "@/lib/copsoqMethodology";
 
 export interface SurveyResponse {
   id: string;
