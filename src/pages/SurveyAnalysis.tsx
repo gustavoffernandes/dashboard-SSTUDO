@@ -213,10 +213,10 @@ export default function SurveyAnalysis() {
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-card text-foreground hover:bg-secondary/50"
                 )}
-                title={showCopsoqSummary ? "Mostrar radar e perguntas" : "Mostrar apenas pontuação por dimensão e comportamentos ofensivos"}
+                title={showCopsoqSummary ? "Ocultar pontuação por dimensão e comportamentos ofensivos" : "Mostrar pontuação por dimensão e comportamentos ofensivos"}
               >
                 {showCopsoqSummary ? <List className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}
-                {showCopsoqSummary ? "Ver perguntas" : "Resumo por dimensão"}
+                {showCopsoqSummary ? "Ocultar resumo" : "Resumo por dimensão"}
               </button>
             )}
           </div>
