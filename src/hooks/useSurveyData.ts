@@ -373,5 +373,6 @@ export function useSurveyData() {
     getOutlierResponses,
     getSectorAverages,
     getFormConfigsForCompany,
+    getPoolMethodology,
   };
 }
