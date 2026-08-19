@@ -213,20 +213,34 @@ export function useSurveyData() {
     return Math.round((sum / withAnswer.length) * 100) / 100;
   }
 
-  function getSectionAverage(sectionId: string, companyId?: string): number {
+  function sectionAverageForPool(sectionId: string, pool: Respondent[]): number {
+    if (pool.length === 0) return 0;
+
+    // Domínios COPSOQ: índice de favorabilidade 0-5 (maior = melhor)
+    if (isCopsoqSectionId(sectionId)) {
+      return copsoqDomainIndex(copsoqDomainIdFromSection(sectionId), pool);
+    }
+
     const sectionQuestions = questions.filter(q => q.section === sectionId);
     if (sectionQuestions.length === 0) return 0;
-    const pool = companyId ? getCompanyRespondents(companyId) : respondents;
-    if (pool.length === 0) return 0;
 
     const questionsWithData = sectionQuestions.filter(q =>
       pool.some(r => r.answers[q.id] !== undefined)
     );
     if (questionsWithData.length === 0) return 0;
 
-    const avg = questionsWithData.reduce((acc, q) => acc + getQuestionAverage(q.id, companyId), 0) / questionsWithData.length;
+    const avg = questionsWithData.reduce((acc, q) => {
+      const withAns = pool.filter(r => r.answers[q.id] !== undefined);
+      if (withAns.length === 0) return acc;
+      return acc + withAns.reduce((a, r) => a + (r.answers[q.id] || 0), 0) / withAns.length;
+    }, 0) / questionsWithData.length;
     return Math.round(avg * 100) / 100;
   }
+
+  function getSectionAverage(sectionId: string, companyId?: string): number {
+    return sectionAverageForPool(sectionId, companyId ? getCompanyRespondents(companyId) : respondents);
+  }
+
 
   function getAnswerDistribution(questionId: string, companyId?: string) {
     const pool = companyId ? getCompanyRespondents(companyId) : respondents;
