@@ -14,6 +14,10 @@ import {
   dimensionAverage, dimensionScore, calculateCopsoqPxS, offensiveSummary,
 } from "@/lib/copsoqMethodology";
 import {
+  COPSOQ_SECTIONS, copsoqSectionId, isCopsoqSectionId, copsoqDomainIdFromSection,
+  copsoqDomainIndex, copsoqFavorabilityIndex,
+} from "@/lib/unifiedAnalysis";
+import {
   PROART_SCALES, ALL_FACTORS, classifyRisk, getRiskLabel, getRiskColor, getRiskBgColor,
   calculatePxS, getPRLevelLabel, getPRLevelColor, getPRLevelBgColor, PXS_MATRIX, getMatrixCellPR,
 } from "@/lib/proartMethodology";
