@@ -3,6 +3,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { questions, sections, type Respondent, type Company } from "@/data/mockData";
 import { isCopsoqQuestionId, normalizeMethodology, type Methodology } from "@/lib/methodology";
+import {
+  COPSOQ_SECTIONS,
+  copsoqDomainIdFromSection,
+  copsoqDomainIndex,
+  isCopsoqSectionId,
+  poolHasCopsoq,
+} from "@/lib/unifiedAnalysis";
+import { COPSOQ_DOMAINS } from "@/lib/copsoqMethodology";
 
 export interface SurveyResponse {
   id: string;
@@ -213,20 +221,34 @@ export function useSurveyData() {
     return Math.round((sum / withAnswer.length) * 100) / 100;
   }
 
-  function getSectionAverage(sectionId: string, companyId?: string): number {
+  function sectionAverageForPool(sectionId: string, pool: Respondent[]): number {
+    if (pool.length === 0) return 0;
+
+    // Domínios COPSOQ: índice de favorabilidade 0-5 (maior = melhor)
+    if (isCopsoqSectionId(sectionId)) {
+      return copsoqDomainIndex(copsoqDomainIdFromSection(sectionId), pool);
+    }
+
     const sectionQuestions = questions.filter(q => q.section === sectionId);
     if (sectionQuestions.length === 0) return 0;
-    const pool = companyId ? getCompanyRespondents(companyId) : respondents;
-    if (pool.length === 0) return 0;
 
     const questionsWithData = sectionQuestions.filter(q =>
       pool.some(r => r.answers[q.id] !== undefined)
     );
     if (questionsWithData.length === 0) return 0;
 
-    const avg = questionsWithData.reduce((acc, q) => acc + getQuestionAverage(q.id, companyId), 0) / questionsWithData.length;
+    const avg = questionsWithData.reduce((acc, q) => {
+      const withAns = pool.filter(r => r.answers[q.id] !== undefined);
+      if (withAns.length === 0) return acc;
+      return acc + withAns.reduce((a, r) => a + (r.answers[q.id] || 0), 0) / withAns.length;
+    }, 0) / questionsWithData.length;
     return Math.round(avg * 100) / 100;
   }
+
+  function getSectionAverage(sectionId: string, companyId?: string): number {
+    return sectionAverageForPool(sectionId, companyId ? getCompanyRespondents(companyId) : respondents);
+  }
+
 
   function getAnswerDistribution(questionId: string, companyId?: string) {
     const pool = companyId ? getCompanyRespondents(companyId) : respondents;
@@ -252,8 +274,22 @@ export function useSurveyData() {
   function getAvailableSections() {
     const availableQs = getAvailableQuestions();
     const sectionIds = new Set(availableQs.map(q => q.section));
-    return sections.filter(s => sectionIds.has(s.id));
+    const proartSections = sections
+      .filter(s => sectionIds.has(s.id))
+      .map(s => ({ ...s, methodology: "proart" as const }));
+
+    // Domínios COPSOQ com dados entram como "pilares" na mesma lista
+    const copsoqSections = COPSOQ_SECTIONS.filter(s => {
+      const domain = COPSOQ_DOMAINS.find(d => d.id === copsoqDomainIdFromSection(s.id));
+      if (!domain) return false;
+      return domain.dimensions.some(dim =>
+        dim.questionIds.some(qid => respondents.some(r => r.answers[qid] !== undefined))
+      );
+    });
+
+    return [...proartSections, ...copsoqSections];
   }
+
 
   function getOutlierResponses(companyId: string, threshold: number = 1.5) {
     const pool = getCompanyRespondents(companyId);
@@ -305,19 +341,18 @@ export function useSurveyData() {
       const sectorPool = pool.filter(r => r.sector === sector);
       const sectionAvgs: Record<string, number> = {};
       availableSects.forEach(s => {
-        const qs = questions.filter(q => q.section === s.id);
-        const qsWithData = qs.filter(q => sectorPool.some(r => r.answers[q.id] !== undefined));
-        if (qsWithData.length === 0) { sectionAvgs[s.id] = 0; return; }
-        const avg = qsWithData.reduce((acc, q) => {
-          const withAns = sectorPool.filter(r => r.answers[q.id] !== undefined);
-          if (withAns.length === 0) return acc;
-          return acc + withAns.reduce((a, r) => a + r.answers[q.id], 0) / withAns.length;
-        }, 0) / qsWithData.length;
-        sectionAvgs[s.id] = Math.round(avg * 100) / 100;
+        sectionAvgs[s.id] = sectionAverageForPool(s.id, sectorPool);
       });
       return { sector, count: sectorPool.length, sectionAvgs };
     });
   }
+
+  /** Metodologia predominante nas respostas (opcionalmente de uma empresa) */
+  function getPoolMethodology(companyId?: string): Methodology {
+    const pool = companyId ? getCompanyRespondents(companyId) : respondents;
+    return poolHasCopsoq(pool) ? "copsoq" : "proart";
+  }
+
 
   function getFormConfigsForCompany(companyKey: string): FormConfig[] {
     return formConfigs.filter(f => f.companyKey === companyKey);
@@ -338,5 +373,6 @@ export function useSurveyData() {
     getOutlierResponses,
     getSectorAverages,
     getFormConfigsForCompany,
+    getPoolMethodology,
   };
 }
