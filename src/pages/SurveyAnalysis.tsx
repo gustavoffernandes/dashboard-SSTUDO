@@ -213,15 +213,15 @@ export default function SurveyAnalysis() {
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-card text-foreground hover:bg-secondary/50"
                 )}
-                title={showCopsoqSummary ? "Mostrar radar e perguntas" : "Mostrar apenas pontuação por dimensão e comportamentos ofensivos"}
+                title={showCopsoqSummary ? "Ocultar pontuação por dimensão e comportamentos ofensivos" : "Mostrar pontuação por dimensão e comportamentos ofensivos"}
               >
                 {showCopsoqSummary ? <List className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}
-                {showCopsoqSummary ? "Ver perguntas" : "Resumo por dimensão"}
+                {showCopsoqSummary ? "Ocultar resumo" : "Resumo por dimensão"}
               </button>
             )}
           </div>
 
-          {isCopsoq && !showCopsoqSummary && (
+          {isCopsoq && (
             <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card min-w-0">
               <h3 className="mb-3 text-sm font-semibold text-card-foreground">Radar das Dimensões (normalizado 0-5)</h3>
               <ResponsiveChart height={isCopsoq ? 320 : 250}>
@@ -235,7 +235,7 @@ export default function SurveyAnalysis() {
             </div>
           )}
 
-          {isCopsoq && (
+          {isCopsoq && showCopsoqSummary && (
             <>
               {/* Resumo das dimensões */}
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card">
@@ -286,30 +286,28 @@ export default function SurveyAnalysis() {
             </>
           )}
 
-          {!showCopsoqSummary && (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {isCopsoq
-                ? domainQuestions.map(q => (
-                    <QuestionChart
-                      key={q.id}
-                      questionId={q.id}
-                      questionText={`${q.code}. ${q.text}`}
-                      getAnswerDistribution={copsoqDistribution}
-                      valueLabels={Object.fromEntries(COPSOQ_OPTION_SETS[q.optionSet].map(o => [o.value, o.label]))}
-                    />
-                  ))
-                : sectionQuestions.map((q) => (
-                    <QuestionChart
-                      key={q.id}
-                      questionId={q.id}
-                      questionText={`${q.number}. ${q.text}`}
-                      companyId={effectiveCompany || undefined}
-                      getAnswerDistribution={useCustomDist ? customDistribution : getAnswerDistribution}
-                    />
-                  ))}
-            </div>
-          )}
-          {!showCopsoqSummary && (isCopsoq ? domainQuestions.length === 0 : sectionQuestions.length === 0) && (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {isCopsoq
+              ? domainQuestions.map(q => (
+                  <QuestionChart
+                    key={q.id}
+                    questionId={q.id}
+                    questionText={`${q.code}. ${q.text}`}
+                    getAnswerDistribution={copsoqDistribution}
+                    valueLabels={Object.fromEntries(COPSOQ_OPTION_SETS[q.optionSet].map(o => [o.value, o.label]))}
+                  />
+                ))
+              : sectionQuestions.map((q) => (
+                  <QuestionChart
+                    key={q.id}
+                    questionId={q.id}
+                    questionText={`${q.number}. ${q.text}`}
+                    companyId={effectiveCompany || undefined}
+                    getAnswerDistribution={useCustomDist ? customDistribution : getAnswerDistribution}
+                  />
+                ))}
+          </div>
+          {(isCopsoq ? domainQuestions.length === 0 : sectionQuestions.length === 0) && (
             <p className="text-sm text-muted-foreground text-center py-8">
               Nenhuma pergunta com dados {isCopsoq ? "neste domínio" : "nesta seção"}.
             </p>
