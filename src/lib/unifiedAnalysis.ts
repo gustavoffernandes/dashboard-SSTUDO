@@ -18,6 +18,8 @@ import {
   type CopsoqDimension,
 } from "@/lib/copsoqMethodology";
 
+import { questions, sections } from "@/data/mockData";
+
 export const COPSOQ_SECTION_PREFIX = "copsoq:";
 
 export interface UnifiedSection {
@@ -95,4 +97,40 @@ export function copsoqDimensionIndex(
 export function poolHasCopsoq(pool: { answers: Record<string, number> }[]): boolean {
   return pool.some(r => COPSOQ_DOMAINS.some(d => d.dimensions.some(dim =>
     dim.questionIds.some(q => r.answers[q] !== undefined))));
+}
+
+/**
+ * Média de uma seção (escala PROART ou domínio COPSOQ) para um conjunto de respondentes.
+ * PROART: média bruta 1-5. COPSOQ: índice de favorabilidade 0-5 (maior = melhor).
+ */
+export function sectionAverageForPool(
+  sectionId: string,
+  pool: { answers: Record<string, number> }[]
+): number {
+  if (pool.length === 0) return 0;
+  if (isCopsoqSectionId(sectionId)) {
+    return copsoqDomainIndex(copsoqDomainIdFromSection(sectionId), pool);
+  }
+  const qs = questions.filter(q => q.section === sectionId);
+  const qsWithData = qs.filter(q => pool.some(r => r.answers[q.id] !== undefined));
+  if (qsWithData.length === 0) return 0;
+  const avg = qsWithData.reduce((acc, q) => {
+    const withAns = pool.filter(r => r.answers[q.id] !== undefined);
+    return acc + (withAns.length > 0 ? withAns.reduce((a, r) => a + (r.answers[q.id] || 0), 0) / withAns.length : 0);
+  }, 0) / qsWithData.length;
+  return Math.round(avg * 100) / 100;
+}
+
+/** Seções (PROART + COPSOQ) que possuem dados no conjunto informado */
+export function availableSectionsForPool(pool: { answers: Record<string, number> }[]) {
+  const answered = new Set<string>();
+  pool.forEach(r => Object.keys(r.answers).forEach(k => answered.add(k)));
+  const proart = sections
+    .filter(s => questions.some(q => q.section === s.id && answered.has(q.id)))
+    .map(s => ({ ...s, methodology: "proart" as const }));
+  const copsoq = COPSOQ_SECTIONS.filter(s => {
+    const domain = COPSOQ_DOMAINS.find(d => copsoqSectionId(d.id) === s.id);
+    return !!domain && domain.dimensions.some(dim => dim.questionIds.some(qid => answered.has(qid)));
+  });
+  return [...proart, ...copsoq];
 }
