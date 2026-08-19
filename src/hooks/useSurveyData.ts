@@ -274,8 +274,22 @@ export function useSurveyData() {
   function getAvailableSections() {
     const availableQs = getAvailableQuestions();
     const sectionIds = new Set(availableQs.map(q => q.section));
-    return sections.filter(s => sectionIds.has(s.id));
+    const proartSections = sections
+      .filter(s => sectionIds.has(s.id))
+      .map(s => ({ ...s, methodology: "proart" as const }));
+
+    // Domínios COPSOQ com dados entram como "pilares" na mesma lista
+    const copsoqSections = COPSOQ_SECTIONS.filter(s => {
+      const domain = COPSOQ_DOMAINS.find(d => d.id === copsoqDomainIdFromSection(s.id));
+      if (!domain) return false;
+      return domain.dimensions.some(dim =>
+        dim.questionIds.some(qid => respondents.some(r => r.answers[qid] !== undefined))
+      );
+    });
+
+    return [...proartSections, ...copsoqSections];
   }
+
 
   function getOutlierResponses(companyId: string, threshold: number = 1.5) {
     const pool = getCompanyRespondents(companyId);
