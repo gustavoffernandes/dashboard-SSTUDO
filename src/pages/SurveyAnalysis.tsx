@@ -221,22 +221,20 @@ export default function SurveyAnalysis() {
             )}
           </div>
 
-          {isCopsoq && (
-            <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card min-w-0">
-              <h3 className="mb-3 text-sm font-semibold text-card-foreground">Radar das Dimensões (normalizado 0-5)</h3>
-              <ResponsiveChart height={isCopsoq ? 320 : 250}>
-                <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={chart.radarOuterRadius - 10}>
-                  <PolarGrid stroke="hsl(var(--border))" />
-                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: isCopsoq ? 8 : chart.radarAngleFontSize, fill: "hsl(var(--muted-foreground))" }} />
-                  <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 9 }} />
-                  <Radar dataKey="média" stroke={COLORS[0]} fill={COLORS[0]} fillOpacity={0.15} strokeWidth={2} />
-                </RadarChart>
-              </ResponsiveChart>
-            </div>
-          )}
-
           {isCopsoq && showCopsoqSummary && (
             <>
+              <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card min-w-0">
+                <h3 className="mb-3 text-sm font-semibold text-card-foreground">Radar das Dimensões (normalizado 0-5)</h3>
+                <ResponsiveChart height={320}>
+                  <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={chart.radarOuterRadius - 10}>
+                    <PolarGrid stroke="hsl(var(--border))" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fontSize: 8, fill: "hsl(var(--muted-foreground))" }} />
+                    <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 9 }} />
+                    <Radar dataKey="média" stroke={COLORS[0]} fill={COLORS[0]} fillOpacity={0.15} strokeWidth={2} />
+                  </RadarChart>
+                </ResponsiveChart>
+              </div>
+
               {/* Resumo das dimensões */}
               <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card">
                 <h3 className="mb-3 text-sm font-semibold text-card-foreground">Pontuação por Dimensão</h3>
