@@ -28,6 +28,7 @@ export default function SurveyAnalysis() {
   const { isCompanyUser } = useAuth();
   const [activeSection, setActiveSection] = useState("contexto");
   const [activeDomain, setActiveDomain] = useState("demandas");
+  const [showCopsoqSummary, setShowCopsoqSummary] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const chart = useChartConfig();
 
