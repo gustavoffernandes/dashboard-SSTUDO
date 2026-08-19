@@ -2,6 +2,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
 import { ResponsiveChart, useChartConfig } from "@/components/dashboard/ResponsiveChart";
 import { sections, questions } from "@/data/mockData";
+import { sectionAverageForPool } from "@/lib/unifiedAnalysis";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useAuth } from "@/contexts/AuthContext";
 import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
@@ -83,12 +84,7 @@ export default function Demographics() {
   const poolWithSex = pool.map(r => ({ ...r, normalizedSex: normalizeSex(r.sex) }));
 
   function groupAverage(group: typeof pool, sectionId: string): number {
-    const qs = questions.filter(q => q.section === sectionId);
-    if (group.length === 0 || qs.length === 0) return 0;
-    const qsWithData = qs.filter(q => group.some(r => r.answers[q.id] !== undefined));
-    if (qsWithData.length === 0) return 0;
-    const sum = group.reduce((acc, r) => acc + qsWithData.reduce((a, q) => a + (r.answers[q.id] || 0), 0), 0);
-    return Math.round((sum / (group.length * qsWithData.length)) * 100) / 100;
+    return sectionAverageForPool(sectionId, group);
   }
 
   const sexGroups = [...new Set(poolWithSex.map(r => r.normalizedSex))].filter(Boolean);

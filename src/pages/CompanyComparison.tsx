@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { sectionAverageForPool } from "@/lib/unifiedAnalysis";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useAuth } from "@/contexts/AuthContext";
 import { questions, sections } from "@/data/mockData";
@@ -56,17 +57,8 @@ export default function CompanyComparison() {
 
   const selectedCompanies = companies.filter(c => effectiveSelected.includes(c.id));
 
-  const getFilteredAverage = (sectionId: string, companyId: string) => {
-    const pool = filteredByAll.filter(r => r.companyId === companyId);
-    const qs = questions.filter(q => q.section === sectionId);
-    const qsWithData = qs.filter(q => pool.some(r => r.answers[q.id] !== undefined));
-    if (qsWithData.length === 0) return 0;
-    const avg = qsWithData.reduce((acc, q) => {
-      const withAns = pool.filter(r => r.answers[q.id] !== undefined);
-      return acc + (withAns.length > 0 ? withAns.reduce((a, r) => a + r.answers[q.id], 0) / withAns.length : 0);
-    }, 0) / qsWithData.length;
-    return Math.round(avg * 100) / 100;
-  };
+  const getFilteredAverage = (sectionId: string, companyId: string) =>
+    sectionAverageForPool(sectionId, filteredByAll.filter(r => r.companyId === companyId));
 
   const displaySections = sectionFilter ? availableSections.filter(s => s.id === sectionFilter) : availableSections;
 
@@ -105,15 +97,7 @@ export default function CompanyComparison() {
     const row: Record<string, string | number> = { name: s.shortName };
     selectedCompanies.forEach(c => {
       const pool = filteredByAll.filter(r => r.companyId === c.id && r.sector === effectiveCrossSector);
-      if (pool.length === 0) { row[c.name.split(" ")[0]] = 0; return; }
-      const qs = questions.filter(q => q.section === s.id);
-      const qsWithData = qs.filter(q => pool.some(r => r.answers[q.id] !== undefined));
-      if (qsWithData.length === 0) { row[c.name.split(" ")[0]] = 0; return; }
-      const avg = qsWithData.reduce((acc, q) => {
-        const withAns = pool.filter(r => r.answers[q.id] !== undefined);
-        return acc + (withAns.length > 0 ? withAns.reduce((a, r) => a + r.answers[q.id], 0) / withAns.length : 0);
-      }, 0) / qsWithData.length;
-      row[c.name.split(" ")[0]] = Math.round(avg * 100) / 100;
+      row[c.name.split(" ")[0]] = sectionAverageForPool(s.id, pool);
     });
     return row;
   }) : [];
