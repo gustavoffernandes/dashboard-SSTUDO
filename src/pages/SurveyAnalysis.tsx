@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { LayoutList, List } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { QuestionChart } from "@/components/dashboard/QuestionChart";
 import { FormFilter } from "@/components/dashboard/FormFilter";
@@ -27,6 +28,7 @@ export default function SurveyAnalysis() {
   const { isCompanyUser } = useAuth();
   const [activeSection, setActiveSection] = useState("contexto");
   const [activeDomain, setActiveDomain] = useState("demandas");
+  const [showCopsoqSummary, setShowCopsoqSummary] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const chart = useChartConfig();
 
@@ -200,21 +202,38 @@ export default function SurveyAnalysis() {
               <option value="">Todos os setores</option>
               {availableSectors.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
+
+            {isCopsoq && (
+              <button
+                type="button"
+                onClick={() => setShowCopsoqSummary(v => !v)}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all w-full sm:w-auto",
+                  showCopsoqSummary
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card text-foreground hover:bg-secondary/50"
+                )}
+                title={showCopsoqSummary ? "Mostrar radar e perguntas" : "Mostrar apenas pontuação por dimensão e comportamentos ofensivos"}
+              >
+                {showCopsoqSummary ? <List className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}
+                {showCopsoqSummary ? "Ver perguntas" : "Resumo por dimensão"}
+              </button>
+            )}
           </div>
 
-          <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card min-w-0">
-            <h3 className="mb-3 text-sm font-semibold text-card-foreground">
-              {isCopsoq ? "Radar das Dimensões (normalizado 0-5)" : "Radar Geral"}
-            </h3>
-            <ResponsiveChart height={isCopsoq ? 320 : 250}>
-              <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={chart.radarOuterRadius - 10}>
-                <PolarGrid stroke="hsl(var(--border))" />
-                <PolarAngleAxis dataKey="subject" tick={{ fontSize: isCopsoq ? 8 : chart.radarAngleFontSize, fill: "hsl(var(--muted-foreground))" }} />
-                <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 9 }} />
-                <Radar dataKey="média" stroke={COLORS[0]} fill={COLORS[0]} fillOpacity={0.15} strokeWidth={2} />
-              </RadarChart>
-            </ResponsiveChart>
-          </div>
+          {isCopsoq && !showCopsoqSummary && (
+            <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card min-w-0">
+              <h3 className="mb-3 text-sm font-semibold text-card-foreground">Radar das Dimensões (normalizado 0-5)</h3>
+              <ResponsiveChart height={isCopsoq ? 320 : 250}>
+                <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={chart.radarOuterRadius - 10}>
+                  <PolarGrid stroke="hsl(var(--border))" />
+                  <PolarAngleAxis dataKey="subject" tick={{ fontSize: isCopsoq ? 8 : chart.radarAngleFontSize, fill: "hsl(var(--muted-foreground))" }} />
+                  <PolarRadiusAxis angle={90} domain={[0, 5]} tick={{ fontSize: 9 }} />
+                  <Radar dataKey="média" stroke={COLORS[0]} fill={COLORS[0]} fillOpacity={0.15} strokeWidth={2} />
+                </RadarChart>
+              </ResponsiveChart>
+            </div>
+          )}
 
           {isCopsoq && (
             <>
@@ -267,28 +286,30 @@ export default function SurveyAnalysis() {
             </>
           )}
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {isCopsoq
-              ? domainQuestions.map(q => (
-                  <QuestionChart
-                    key={q.id}
-                    questionId={q.id}
-                    questionText={`${q.code}. ${q.text}`}
-                    getAnswerDistribution={copsoqDistribution}
-                    valueLabels={Object.fromEntries(COPSOQ_OPTION_SETS[q.optionSet].map(o => [o.value, o.label]))}
-                  />
-                ))
-              : sectionQuestions.map((q) => (
-                  <QuestionChart
-                    key={q.id}
-                    questionId={q.id}
-                    questionText={`${q.number}. ${q.text}`}
-                    companyId={effectiveCompany || undefined}
-                    getAnswerDistribution={useCustomDist ? customDistribution : getAnswerDistribution}
-                  />
-                ))}
-          </div>
-          {(isCopsoq ? domainQuestions.length === 0 : sectionQuestions.length === 0) && (
+          {!showCopsoqSummary && (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {isCopsoq
+                ? domainQuestions.map(q => (
+                    <QuestionChart
+                      key={q.id}
+                      questionId={q.id}
+                      questionText={`${q.code}. ${q.text}`}
+                      getAnswerDistribution={copsoqDistribution}
+                      valueLabels={Object.fromEntries(COPSOQ_OPTION_SETS[q.optionSet].map(o => [o.value, o.label]))}
+                    />
+                  ))
+                : sectionQuestions.map((q) => (
+                    <QuestionChart
+                      key={q.id}
+                      questionId={q.id}
+                      questionText={`${q.number}. ${q.text}`}
+                      companyId={effectiveCompany || undefined}
+                      getAnswerDistribution={useCustomDist ? customDistribution : getAnswerDistribution}
+                    />
+                  ))}
+            </div>
+          )}
+          {!showCopsoqSummary && (isCopsoq ? domainQuestions.length === 0 : sectionQuestions.length === 0) && (
             <p className="text-sm text-muted-foreground text-center py-8">
               Nenhuma pergunta com dados {isCopsoq ? "neste domínio" : "nesta seção"}.
             </p>
