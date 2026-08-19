@@ -221,7 +221,7 @@ export default function SurveyAnalysis() {
             )}
           </div>
 
-          {isCopsoq && !showCopsoqSummary && (
+          {isCopsoq && (
             <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card min-w-0">
               <h3 className="mb-3 text-sm font-semibold text-card-foreground">Radar das Dimensões (normalizado 0-5)</h3>
               <ResponsiveChart height={isCopsoq ? 320 : 250}>
