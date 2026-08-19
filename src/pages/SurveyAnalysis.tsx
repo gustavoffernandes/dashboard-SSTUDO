@@ -286,28 +286,30 @@ export default function SurveyAnalysis() {
             </>
           )}
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {isCopsoq
-              ? domainQuestions.map(q => (
-                  <QuestionChart
-                    key={q.id}
-                    questionId={q.id}
-                    questionText={`${q.code}. ${q.text}`}
-                    getAnswerDistribution={copsoqDistribution}
-                    valueLabels={Object.fromEntries(COPSOQ_OPTION_SETS[q.optionSet].map(o => [o.value, o.label]))}
-                  />
-                ))
-              : sectionQuestions.map((q) => (
-                  <QuestionChart
-                    key={q.id}
-                    questionId={q.id}
-                    questionText={`${q.number}. ${q.text}`}
-                    companyId={effectiveCompany || undefined}
-                    getAnswerDistribution={useCustomDist ? customDistribution : getAnswerDistribution}
-                  />
-                ))}
-          </div>
-          {(isCopsoq ? domainQuestions.length === 0 : sectionQuestions.length === 0) && (
+          {!showCopsoqSummary && (
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {isCopsoq
+                ? domainQuestions.map(q => (
+                    <QuestionChart
+                      key={q.id}
+                      questionId={q.id}
+                      questionText={`${q.code}. ${q.text}`}
+                      getAnswerDistribution={copsoqDistribution}
+                      valueLabels={Object.fromEntries(COPSOQ_OPTION_SETS[q.optionSet].map(o => [o.value, o.label]))}
+                    />
+                  ))
+                : sectionQuestions.map((q) => (
+                    <QuestionChart
+                      key={q.id}
+                      questionId={q.id}
+                      questionText={`${q.number}. ${q.text}`}
+                      companyId={effectiveCompany || undefined}
+                      getAnswerDistribution={useCustomDist ? customDistribution : getAnswerDistribution}
+                    />
+                  ))}
+            </div>
+          )}
+          {!showCopsoqSummary && (isCopsoq ? domainQuestions.length === 0 : sectionQuestions.length === 0) && (
             <p className="text-sm text-muted-foreground text-center py-8">
               Nenhuma pergunta com dados {isCopsoq ? "neste domínio" : "nesta seção"}.
             </p>
