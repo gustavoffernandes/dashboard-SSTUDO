@@ -327,19 +327,18 @@ export function useSurveyData() {
       const sectorPool = pool.filter(r => r.sector === sector);
       const sectionAvgs: Record<string, number> = {};
       availableSects.forEach(s => {
-        const qs = questions.filter(q => q.section === s.id);
-        const qsWithData = qs.filter(q => sectorPool.some(r => r.answers[q.id] !== undefined));
-        if (qsWithData.length === 0) { sectionAvgs[s.id] = 0; return; }
-        const avg = qsWithData.reduce((acc, q) => {
-          const withAns = sectorPool.filter(r => r.answers[q.id] !== undefined);
-          if (withAns.length === 0) return acc;
-          return acc + withAns.reduce((a, r) => a + r.answers[q.id], 0) / withAns.length;
-        }, 0) / qsWithData.length;
-        sectionAvgs[s.id] = Math.round(avg * 100) / 100;
+        sectionAvgs[s.id] = sectionAverageForPool(s.id, sectorPool);
       });
       return { sector, count: sectorPool.length, sectionAvgs };
     });
   }
+
+  /** Metodologia predominante nas respostas (opcionalmente de uma empresa) */
+  function getPoolMethodology(companyId?: string): Methodology {
+    const pool = companyId ? getCompanyRespondents(companyId) : respondents;
+    return poolHasCopsoq(pool) ? "copsoq" : "proart";
+  }
+
 
   function getFormConfigsForCompany(companyKey: string): FormConfig[] {
     return formConfigs.filter(f => f.companyKey === companyKey);
