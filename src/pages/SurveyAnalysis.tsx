@@ -202,6 +202,23 @@ export default function SurveyAnalysis() {
               <option value="">Todos os setores</option>
               {availableSectors.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
+
+            {isCopsoq && (
+              <button
+                type="button"
+                onClick={() => setShowCopsoqSummary(v => !v)}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-all w-full sm:w-auto",
+                  showCopsoqSummary
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border bg-card text-foreground hover:bg-secondary/50"
+                )}
+                title={showCopsoqSummary ? "Mostrar radar e perguntas" : "Mostrar apenas pontuação por dimensão e comportamentos ofensivos"}
+              >
+                {showCopsoqSummary ? <List className="h-4 w-4" /> : <LayoutList className="h-4 w-4" />}
+                {showCopsoqSummary ? "Ver perguntas" : "Resumo por dimensão"}
+              </button>
+            )}
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4 sm:p-5 shadow-card min-w-0">
