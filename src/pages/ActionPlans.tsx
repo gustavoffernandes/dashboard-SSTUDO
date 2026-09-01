@@ -2,7 +2,6 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useActionPlans } from "@/hooks/useActionPlans";
-import { FormFilter } from "@/components/dashboard/FormFilter";
 import {
   PROART_SCALES, ALL_FACTORS, classifyRisk, getRiskLabel, getRiskColor, getRiskBgColor,
   calculatePxS, getPRLevelLabel, getPRLevelColor, getPRLevelBgColor,
@@ -17,6 +16,7 @@ import {
 import { methodologyLabel, type Methodology } from "@/lib/methodology";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useGlobalFilter } from "@/contexts/GlobalFilterContext";
 import { Loader2, Plus, CheckCircle2, Clock, AlertTriangle, Trash2, ChevronDown, ChevronUp, MessageSquare, Target, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Progress } from "@/components/ui/progress";
@@ -25,8 +25,7 @@ export default function ActionPlans() {
   const { user, isCompanyUser } = useAuth();
   const { isLoading: loadingSurvey, hasData, companies, respondents, getCompanyRespondents, getAvailableSections, getFormConfigsForCompany } = useSurveyData();
   const { plans, tasks, isLoading: loadingPlans, createPlan, updatePlanStatus, deletePlan, createTask, updateTask, deleteTask } = useActionPlans();
-  const [selectedCompany, setSelectedCompany] = useState<string>("");
-  const [selectedFormId, setSelectedFormId] = useState<string>("");
+  const { companyId: selectedCompany, formId: selectedFormId } = useGlobalFilter();
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [editingObs, setEditingObs] = useState<string | null>(null);
@@ -471,16 +470,7 @@ export default function ActionPlans() {
 
           </div>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            {!isCompanyUser && (
-              <select value={effectiveCompany} onChange={e => { setSelectedCompany(e.target.value); setSelectedFormId(""); }} className="rounded-lg border border-border bg-background px-3 py-2 text-sm w-full sm:w-auto">
-                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            )}
-            <FormFilter
-              forms={companyForms}
-              selectedFormId={selectedFormId}
-              onChange={setSelectedFormId}
-            />
+            <span className="text-sm font-medium text-foreground">{company?.name || ""}</span>
           </div>
         </div>
 

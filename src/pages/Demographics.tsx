@@ -4,6 +4,7 @@ import { ResponsiveChart, useChartConfig } from "@/components/dashboard/Responsi
 import { questions } from "@/data/mockData";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useAuth } from "@/contexts/AuthContext";
+import { useGlobalFilter } from "@/contexts/GlobalFilterContext";
 import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useSearchParams } from "react-router-dom";
@@ -48,7 +49,7 @@ export default function Demographics() {
   const availableSections = getAvailableSections();
   const chart = useChartConfig();
 
-  const companyFilter = searchParams.get("company") || "";
+  const { companyId: companyFilter, formId: globalFormId } = useGlobalFilter();
   const sectorFilter = searchParams.get("sector") || "";
 
   const updateParams = (updates: Record<string, string>) => {
@@ -74,7 +75,9 @@ export default function Demographics() {
   const effectiveCompanyFilter = isCompanyUser && companies.length === 1 ? companies[0].id : companyFilter;
 
   // ===== Metodologia ativa conforme empresa selecionada =====
-  const relevantForms = effectiveCompanyFilter
+  const relevantForms = globalFormId
+    ? formConfigs.filter(f => f.configId === globalFormId)
+    : effectiveCompanyFilter
     ? formConfigs.filter(f => f.companyKey === effectiveCompanyFilter)
     : formConfigs;
   const isCopsoq = relevantForms.length > 0 && relevantForms.every(f => f.methodology === "copsoq");
@@ -102,7 +105,8 @@ export default function Demographics() {
     if (endDate) { const end = new Date(endDate); end.setHours(23, 59, 59, 999); if (ts > end) return false; }
     return true;
   });
-  const companyPool = effectiveCompanyFilter ? dateFiltered.filter(r => r.companyId === effectiveCompanyFilter) : dateFiltered;
+  let companyPool = effectiveCompanyFilter ? dateFiltered.filter(r => r.companyId === effectiveCompanyFilter) : dateFiltered;
+  if (globalFormId) companyPool = companyPool.filter(r => (r as any).configId === globalFormId);
   const availableSectors = uniqueSectors(companyPool.map(r => r.sector));
   const pool = sectorFilter
     ? companyPool.filter(r => r.sector.toLowerCase().trim() === sectorFilter.toLowerCase().trim())
@@ -236,16 +240,6 @@ export default function Demographics() {
           )}
 
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
-            {!isCompanyUser && (
-              <select
-                value={companyFilter}
-                onChange={(e) => updateParams({ company: e.target.value, sector: "" })}
-                className="rounded-lg border border-border bg-card px-3 py-2 text-sm w-full sm:w-auto"
-              >
-                <option value="">Todas as empresas</option>
-                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            )}
             <select
               value={sectorFilter}
               onChange={(e) => updateParams({ sector: e.target.value })}

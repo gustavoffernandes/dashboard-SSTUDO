@@ -3,12 +3,11 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { HeatmapTable } from "@/components/dashboard/HeatmapTable";
 import { CopsoqHeatmapTable } from "@/components/dashboard/CopsoqHeatmapTable";
 import { CopsoqDimensionFilter } from "@/components/dashboard/CopsoqDimensionFilter";
-import { MultiSelectCompanies } from "@/components/dashboard/MultiSelectCompanies";
 import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
-import { FormFilter } from "@/components/dashboard/FormFilter";
 import { FactorFilter } from "@/components/dashboard/FactorFilter";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useAuth } from "@/contexts/AuthContext";
+import { useGlobalFilter } from "@/contexts/GlobalFilterContext";
 import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Filter } from "lucide-react";
@@ -19,8 +18,8 @@ import { cn } from "@/lib/utils";
 
 export default function Heatmap() {
   const { isCompanyUser, userCompanyId } = useAuth();
-  const [selectedCompanies, setSelectedCompanies] = useState<string[]>([]);
-  const [selectedFormId, setSelectedFormId] = useState<string>("");
+  const { companyId, formId: selectedFormId } = useGlobalFilter();
+  const selectedCompanies = companyId ? [companyId] : [];
   const [selectedSector, setSelectedSector] = useState<string>("");
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
@@ -51,23 +50,7 @@ export default function Heatmap() {
   const { isLoading, hasData, companies, respondents, formConfigs, getAvailableQuestions, getFormConfigsForCompany } = useSurveyData();
 
 
-  const relevantForms = isCompanyUser && userCompanyId
-    ? getFormConfigsForCompany(userCompanyId)
-    : selectedCompanies.length === 1
-      ? formConfigs.filter(f => f.companyKey === selectedCompanies[0])
-      : selectedCompanies.length === 0
-        ? formConfigs
-        : formConfigs.filter(f => selectedCompanies.includes(f.companyKey));
 
-  const handleFormChange = (formId: string) => {
-    setSelectedFormId(formId);
-    if (formId && !isCompanyUser) {
-      const form = formConfigs.find(f => f.configId === formId);
-      if (form && !selectedCompanies.includes(form.companyKey)) {
-        setSelectedCompanies([form.companyKey]);
-      }
-    }
-  };
 
   const availableSectors = useMemo(() => {
     let pool = respondents;
@@ -201,8 +184,6 @@ export default function Heatmap() {
             {isCopsoq
               ? <CopsoqDimensionFilter selected={selectedDimensions} onChange={setSelectedDimensions} />
               : <FactorFilter selected={selectedFactors} onChange={setSelectedFactors} />}
-            {!isCompanyUser && <MultiSelectCompanies companies={companies} selected={selectedCompanies} onChange={(ids) => { setSelectedCompanies(ids); setSelectedFormId(""); }} />}
-            <FormFilter forms={relevantForms} selectedFormId={selectedFormId} onChange={handleFormChange} />
             {availableSectors.length > 0 && (
               <div className="flex items-center gap-2">
                 <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
