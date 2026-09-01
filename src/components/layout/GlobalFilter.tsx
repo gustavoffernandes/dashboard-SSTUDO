@@ -1,27 +1,50 @@
 import { Building2, FileText, X } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGlobalFilter } from "@/contexts/GlobalFilterContext";
 import { cn } from "@/lib/utils";
 
+// Rotas onde nenhum filtro global faz sentido (páginas sem recorte por
+// empresa/formulário ou que já são o próprio cadastro de empresas/formulários).
+const HIDE_ALL_FILTERS_ROUTES = [
+  "/", // Visão Geral
+  "/empresas", // Comparação de Empresas
+  "/empresas-cadastro", // Empresas
+  "/formularios", // Formulários
+  "/respondentes", // Respondentes
+  "/usuarios", // Usuários
+];
+
+// Rotas onde apenas o filtro de formulário deve sumir, mantendo o de empresa.
+const HIDE_FORM_FILTER_ROUTES = [
+  "/evolucao", // Evolução Temporal
+  "/notas", // Bloco de Notas
+];
+
 /**
  * Filtro global de empresa/formulário exibido na barra superior.
  * Aplica-se às abas orientadas a uma única empresa (Análise, Heatmap,
- * Demográfico, Relatórios, Planos de Ação, Notas, Respostas Livres).
+ * Demográfico, Relatórios, Planos de Ação, Notas, Respostas Livres,
+ * Evolução Temporal).
  */
 export function GlobalFilter() {
   const { isCompanyUser } = useAuth();
   const { companies, formConfigs, isLoading } = useSurveyData();
   const { companyId, formId, setCompanyId, setFormId, resetFilter } = useGlobalFilter();
+  const location = useLocation();
 
   if (isLoading || companies.length === 0) return null;
+  if (HIDE_ALL_FILTERS_ROUTES.includes(location.pathname)) return null;
 
   const forms = companyId
     ? formConfigs.filter((f) => f.companyKey === companyId)
     : formConfigs;
 
+  const hideFormFilter = HIDE_FORM_FILTER_ROUTES.includes(location.pathname);
+
   const showCompany = !isCompanyUser && companies.length > 1;
-  const showForms = forms.length > 1;
+  const showForms = !hideFormFilter && forms.length > 1;
 
   if (!showCompany && !showForms) return null;
 
