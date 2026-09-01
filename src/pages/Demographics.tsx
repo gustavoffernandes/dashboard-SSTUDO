@@ -4,6 +4,7 @@ import { ResponsiveChart, useChartConfig } from "@/components/dashboard/Responsi
 import { questions } from "@/data/mockData";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useAuth } from "@/contexts/AuthContext";
+import { useGlobalFilter } from "@/contexts/GlobalFilterContext";
 import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useSearchParams } from "react-router-dom";
@@ -48,7 +49,7 @@ export default function Demographics() {
   const availableSections = getAvailableSections();
   const chart = useChartConfig();
 
-  const companyFilter = searchParams.get("company") || "";
+  const { companyId: companyFilter, formId: globalFormId } = useGlobalFilter();
   const sectorFilter = searchParams.get("sector") || "";
 
   const updateParams = (updates: Record<string, string>) => {
@@ -236,16 +237,6 @@ export default function Demographics() {
           )}
 
           <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
-            {!isCompanyUser && (
-              <select
-                value={companyFilter}
-                onChange={(e) => updateParams({ company: e.target.value, sector: "" })}
-                className="rounded-lg border border-border bg-card px-3 py-2 text-sm w-full sm:w-auto"
-              >
-                <option value="">Todas as empresas</option>
-                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            )}
             <select
               value={sectorFilter}
               onChange={(e) => updateParams({ sector: e.target.value })}

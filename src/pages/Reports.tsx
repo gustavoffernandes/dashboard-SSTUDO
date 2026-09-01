@@ -2,9 +2,9 @@ import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useActionPlans } from "@/hooks/useActionPlans";
-import { FormFilter } from "@/components/dashboard/FormFilter";
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useGlobalFilter } from "@/contexts/GlobalFilterContext";
 import { questions, sections } from "@/data/mockData";
 import { exportCompanyReport, exportComparisonReport, exportRawData } from "@/lib/exportUtils";
 import { exportCompanyPDF, exportComparisonPDF } from "@/lib/pdfExport";
@@ -43,7 +43,7 @@ export default function Reports() {
   const surveyData = useSurveyData();
   const { isLoading, hasData, companies, respondents, getSectionAverage, getCompanyRespondents, getQuestionAverage, getAvailableSections, getAvailableQuestions, getAnswerDistribution, getFormConfigsForCompany } = surveyData;
   const { plans, tasks } = useActionPlans();
-  const [selectedCompany, setSelectedCompany] = useState<string>("");
+  const { companyId: selectedCompany, formId: selectedFormId } = useGlobalFilter();
   const [selectedFormId, setSelectedFormId] = useState<string>("");
   const [selectedSector, setSelectedSector] = useState<string>("");
   

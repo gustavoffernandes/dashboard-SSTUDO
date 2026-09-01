@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useGlobalFilter } from "@/contexts/GlobalFilterContext";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,7 +24,7 @@ export default function CompanyNotes() {
   const { isLoading: surveyLoading, hasData, companies } = useSurveyData();
   const { user, isCompanyUser } = useAuth();
   const queryClient = useQueryClient();
-  const [selectedCompany, setSelectedCompany] = useState<string>("");
+  const { companyId: selectedCompany } = useGlobalFilter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editContent, setEditContent] = useState("");
@@ -102,9 +103,7 @@ export default function CompanyNotes() {
         <div><h1 className="text-2xl font-bold text-foreground">Bloco de Notas</h1><p className="text-sm text-muted-foreground mt-1">Anotações por empresa</p></div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <select value={effectiveCompany} onChange={e => setSelectedCompany(e.target.value)} className="rounded-lg border border-border bg-card px-3 py-2 text-sm w-full sm:w-auto">
-            {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <p className="text-sm font-medium text-foreground">{companies.find(c => c.id === effectiveCompany)?.name || "Empresa"}</p>
           <button onClick={() => setShowNew(true)} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
             <Plus className="h-4 w-4" /> Nova Nota
           </button>

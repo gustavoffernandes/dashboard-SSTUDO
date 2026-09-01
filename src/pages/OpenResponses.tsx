@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useSurveyData } from "@/hooks/useSurveyData";
+import { useGlobalFilter } from "@/contexts/GlobalFilterContext";
 import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
 import { OPEN_QUESTIONS } from "@/lib/proartQuestions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +21,7 @@ interface OpenResponse {
 
 export default function OpenResponses() {
   const { companies, formConfigs, isLoading: surveyLoading } = useSurveyData();
-  const [selectedFormId, setSelectedFormId] = useState("");
+  const { companyId, formId: selectedFormId } = useGlobalFilter();
 
   const { data: responses = [], isLoading: loadingResponses } = useQuery({
     queryKey: ["open-responses"],
