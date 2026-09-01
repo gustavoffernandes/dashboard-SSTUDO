@@ -103,6 +103,7 @@ export function ProativaTopbar({ onMenuClick }: TopbarProps) {
       </div>
 
       <div className="flex items-center gap-2 md:gap-3">
+        <GlobalFilter />
         {isSuperAdmin && (
           <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-black shadow-md">
             ⚡ Modo GOD
