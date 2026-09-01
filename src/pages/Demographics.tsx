@@ -75,7 +75,9 @@ export default function Demographics() {
   const effectiveCompanyFilter = isCompanyUser && companies.length === 1 ? companies[0].id : companyFilter;
 
   // ===== Metodologia ativa conforme empresa selecionada =====
-  const relevantForms = effectiveCompanyFilter
+  const relevantForms = globalFormId
+    ? formConfigs.filter(f => f.configId === globalFormId)
+    : effectiveCompanyFilter
     ? formConfigs.filter(f => f.companyKey === effectiveCompanyFilter)
     : formConfigs;
   const isCopsoq = relevantForms.length > 0 && relevantForms.every(f => f.methodology === "copsoq");
@@ -103,7 +105,8 @@ export default function Demographics() {
     if (endDate) { const end = new Date(endDate); end.setHours(23, 59, 59, 999); if (ts > end) return false; }
     return true;
   });
-  const companyPool = effectiveCompanyFilter ? dateFiltered.filter(r => r.companyId === effectiveCompanyFilter) : dateFiltered;
+  let companyPool = effectiveCompanyFilter ? dateFiltered.filter(r => r.companyId === effectiveCompanyFilter) : dateFiltered;
+  if (globalFormId) companyPool = companyPool.filter(r => (r as any).configId === globalFormId);
   const availableSectors = uniqueSectors(companyPool.map(r => r.sector));
   const pool = sectorFilter
     ? companyPool.filter(r => r.sector.toLowerCase().trim() === sectorFilter.toLowerCase().trim())

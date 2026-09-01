@@ -50,13 +50,6 @@ export default function Heatmap() {
   const { isLoading, hasData, companies, respondents, formConfigs, getAvailableQuestions, getFormConfigsForCompany } = useSurveyData();
 
 
-  const relevantForms = isCompanyUser && userCompanyId
-    ? getFormConfigsForCompany(userCompanyId)
-    : selectedCompanies.length === 1
-      ? formConfigs.filter(f => f.companyKey === selectedCompanies[0])
-      : selectedCompanies.length === 0
-        ? formConfigs
-        : formConfigs.filter(f => selectedCompanies.includes(f.companyKey));
 
 
   const availableSectors = useMemo(() => {
