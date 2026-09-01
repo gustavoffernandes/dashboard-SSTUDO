@@ -2,10 +2,10 @@ import { useState, useMemo } from "react";
 import { LayoutList, List } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { QuestionChart } from "@/components/dashboard/QuestionChart";
-import { FormFilter } from "@/components/dashboard/FormFilter";
 import { ResponsiveChart, useChartConfig } from "@/components/dashboard/ResponsiveChart";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { useAuth } from "@/contexts/AuthContext";
+import { useGlobalFilter } from "@/contexts/GlobalFilterContext";
 import { questions } from "@/data/mockData";
 import { cn, uniqueSectors } from "@/lib/utils";
 import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
@@ -32,8 +32,7 @@ export default function SurveyAnalysis() {
   const [searchParams, setSearchParams] = useSearchParams();
   const chart = useChartConfig();
 
-  const selectedCompany = searchParams.get("company") || "";
-  const selectedFormId = searchParams.get("form") || "";
+  const { companyId: selectedCompany, formId: selectedFormId } = useGlobalFilter();
   const sectorFilter = searchParams.get("sector") || "";
 
   const updateParams = (updates: Record<string, string>) => {
@@ -176,23 +175,6 @@ export default function SurveyAnalysis() {
                     </button>
                   ))}
             </div>
-
-            {!isCompanyUser && (
-              <select
-                value={selectedCompany}
-                onChange={(e) => updateParams({ company: e.target.value, sector: "", form: "" })}
-                className="rounded-lg border border-border bg-card px-3 py-2 text-sm w-full sm:w-auto"
-              >
-                <option value="">Todas as empresas</option>
-                {companies.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            )}
-
-            <FormFilter 
-              forms={companyForms} 
-              selectedFormId={selectedFormId} 
-              onChange={(id) => updateParams({ form: id, sector: "" })} 
-            />
 
             <select 
               value={sectorFilter} 
