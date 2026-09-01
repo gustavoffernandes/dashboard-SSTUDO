@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { GlobalFilter } from "./GlobalFilter";
 
 const allSearchableItems = [
   { label: "Visão Geral", path: "/", keywords: ["dashboard", "home", "início"], adminOnly: false },
