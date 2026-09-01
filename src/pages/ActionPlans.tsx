@@ -26,7 +26,6 @@ export default function ActionPlans() {
   const { isLoading: loadingSurvey, hasData, companies, respondents, getCompanyRespondents, getAvailableSections, getFormConfigsForCompany } = useSurveyData();
   const { plans, tasks, isLoading: loadingPlans, createPlan, updatePlanStatus, deletePlan, createTask, updateTask, deleteTask } = useActionPlans();
   const { companyId: selectedCompany, formId: selectedFormId } = useGlobalFilter();
-  const [selectedFormId, setSelectedFormId] = useState<string>("");
   const [expandedPlan, setExpandedPlan] = useState<string | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [editingObs, setEditingObs] = useState<string | null>(null);

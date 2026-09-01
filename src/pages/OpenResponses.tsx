@@ -35,14 +35,20 @@ export default function OpenResponses() {
     },
   });
 
+  const companyFormIds = useMemo(
+    () => new Set(formConfigs.filter(f => f.companyKey === companyId).map(f => f.configId)),
+    [formConfigs, companyId]
+  );
+
   const filteredResponses = useMemo(() => {
     return responses.filter(r => {
       if (selectedFormId && r.config_id !== selectedFormId) return false;
+      if (!selectedFormId && companyId && !companyFormIds.has(r.config_id)) return false;
       // Filter out responses with empty open_answers
       if (!r.open_answers || Object.values(r.open_answers).every(v => !v || !v.trim())) return false;
       return true;
     });
-  }, [responses, selectedFormId]);
+  }, [responses, selectedFormId, companyId, companyFormIds]);
 
   // Group by question
   const grouped = useMemo(() => {
@@ -85,23 +91,6 @@ export default function OpenResponses() {
           </Badge>
         </div>
 
-        {formConfigs.length > 1 && (
-          <div className="flex items-center gap-2">
-            <select
-              value={selectedFormId}
-              onChange={e => setSelectedFormId(e.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-            >
-              <option value="">Todos os formulários</option>
-              {formConfigs
-                .slice()
-                .sort((a, b) => a.title.localeCompare(b.title, "pt-BR"))
-                .map(fc => (
-                  <option key={fc.configId} value={fc.configId}>{fc.title}</option>
-                ))}
-            </select>
-          </div>
-        )}
 
         {totalOpenAnswers === 0 ? (
           <Card>
