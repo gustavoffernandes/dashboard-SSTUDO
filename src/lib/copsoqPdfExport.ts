@@ -9,10 +9,14 @@ import {
   copsoqBandsText,
   dimensionAverage,
   dimensionScore,
+  dimensionDistribution,
+  normalizedRisk,
+  getCopsoqDimension,
   calculateCopsoqPxS,
   offensiveSummary,
   type CopsoqDimension,
 } from "@/lib/copsoqMethodology";
+import { COPSOQ_OPTION_SETS, getCopsoqQuestionsByDomain } from "@/lib/copsoqQuestions";
 import { getPRLevelLabel } from "@/lib/proartMethodology";
 import type { PDFExportData } from "@/lib/pdfExport";
 
