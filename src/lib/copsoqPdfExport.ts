@@ -128,7 +128,9 @@ export function exportCompanyCopsoqPDF(companyId: string, data: PDFExportData, f
       ["Metodologia", "COPSOQ II-Br (versao curta) - 40 questoes, 7 dominios, 23 dimensoes"],
       ["Formulario", rd(formName || "Todos os formularios")],
       ["Setor da empresa", rd(company.sector || "Nao informado")],
+      ["No de Funcionarios", String(company.employees || "N/A")],
       ["Questionarios Preenchidos", String(pool.length)],
+      ["Taxa de Resposta", `${company.employees > 0 ? Math.round((pool.length / company.employees) * 100) : 0}%`],
       ["Data do Relatorio", new Date().toLocaleDateString("pt-BR")],
     ],
     theme: "plain",
@@ -137,6 +139,55 @@ export function exportCompanyCopsoqPDF(companyId: string, data: PDFExportData, f
     margin: { left: MARGIN, right: MARGIN },
   });
   y = (doc as any).lastAutoTable?.finalY + 8 || y + 40;
+
+  // ---- Perfil dos participantes ----
+  const sexGroups: Record<string, number> = {};
+  const ageGroups: Record<string, number> = { "18-25": 0, "26-35": 0, "36-45": 0, "46-55": 0, "56+": 0 };
+  pool.forEach((r: any) => {
+    const sex = r.sex || "Nao informado";
+    sexGroups[sex] = (sexGroups[sex] || 0) + 1;
+    const age = Number(r.age) || 0;
+    if (age <= 0) return;
+    if (age <= 25) ageGroups["18-25"]++;
+    else if (age <= 35) ageGroups["26-35"]++;
+    else if (age <= 45) ageGroups["36-45"]++;
+    else if (age <= 55) ageGroups["46-55"]++;
+    else ageGroups["56+"]++;
+  });
+
+  y = checkPageBreak(doc, y, 40, company.name, subtitle, pageNum);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(...COLORS.text);
+  doc.text(rd("Perfil dos Participantes:"), MARGIN, y);
+  y += 5;
+
+  const pct = (n: number) => (pool.length > 0 ? `${Math.round((n / pool.length) * 100)}%` : "0%");
+  autoTable(doc, {
+    startY: y,
+    head: [["Genero", "Qtd", "%", "Faixa etaria", "Qtd", "%"]],
+    body: (() => {
+      const sexRows = Object.entries(sexGroups);
+      const ageRows = Object.entries(ageGroups);
+      const len = Math.max(sexRows.length, ageRows.length);
+      return Array.from({ length: len }, (_, i) => [
+        sexRows[i] ? rd(sexRows[i][0]) : "",
+        sexRows[i] ? String(sexRows[i][1]) : "",
+        sexRows[i] ? pct(sexRows[i][1]) : "",
+        ageRows[i] ? ageRows[i][0] : "",
+        ageRows[i] ? String(ageRows[i][1]) : "",
+        ageRows[i] ? pct(ageRows[i][1]) : "",
+      ]);
+    })(),
+    theme: "grid",
+    headStyles: { fillColor: COLORS.primary, textColor: COLORS.white, fontSize: 8, fontStyle: "bold" },
+    bodyStyles: { fontSize: 8, textColor: COLORS.text },
+    styles: { halign: "center", cellPadding: 1.5, lineColor: [200, 200, 200], lineWidth: 0.2 },
+    columnStyles: { 0: { halign: "left", cellWidth: 42 }, 3: { halign: "left", cellWidth: 42 } },
+    alternateRowStyles: { fillColor: COLORS.bg },
+    margin: { left: MARGIN, right: MARGIN },
+  });
+  y = (doc as any).lastAutoTable?.finalY + 10 || y + 30;
 
   // ==================== 2. RESULTS BY DOMAIN / DIMENSION ====================
   y = checkPageBreak(doc, y, 25, company.name, subtitle, pageNum);
