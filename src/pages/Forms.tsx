@@ -11,7 +11,7 @@ import { useSurveyData } from "@/hooks/useSurveyData";
 import { questions, sections } from "@/data/mockData";
 import { exportCompanyPDF } from "@/lib/pdfExport";
 import { exportCompanyCopsoqPDF } from "@/lib/copsoqPdfExport";
-import { normalizeMethodology, methodologyLabel, getMethodologyMeta } from "@/lib/methodology";
+import { normalizeMethodology, methodologyLabel, METHODOLOGIES, type Methodology } from "@/lib/methodology";
 
 interface FormConfig {
   id: string;
@@ -44,6 +44,7 @@ export default function Forms() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     company_cnpj: "",
+    methodology: "proart" as Methodology,
     form_title: "",
     description: "",
     instructions: "Esta pesquisa é anônima e confidencial. Suas respostas serão utilizadas para melhorar o ambiente de trabalho. Por favor, responda com sinceridade.",
@@ -78,7 +79,6 @@ export default function Forms() {
       cnpj: c.cnpj || "",
       name: c.company_name || "Empresa sem nome",
       city,
-      methodology: normalizeMethodology(c.methodology),
       label: city ? `${c.company_name} — ${city}` : c.company_name,
     };
 
@@ -97,7 +97,7 @@ export default function Forms() {
 
   const resetForm = () => {
     setFormData({
-      company_cnpj: "", form_title: "", description: "",
+      company_cnpj: "", methodology: "proart", form_title: "", description: "",
       instructions: "Esta pesquisa é anônima e confidencial. Suas respostas serão utilizadas para melhorar o ambiente de trabalho. Por favor, responda com sinceridade.",
       start_date: "", end_date: "", form_status: "ativa", is_anonymous: true,
       require_cpf: false, require_consent: true, require_password: false, survey_password: "",
@@ -110,10 +110,20 @@ export default function Forms() {
     mutationFn: async (data: typeof formData) => {
       if (!data.company_cnpj) throw new Error("Selecione uma empresa");
       if (!data.form_title) throw new Error("Título é obrigatório");
+      if (!data.methodology) throw new Error("Selecione a metodologia do formulário");
       const branch = registeredCompanies.find(c => c.id === data.company_cnpj);
       if (!branch) throw new Error("Empresa/filial não encontrada");
       const placeholder = placeholderConfigs.find((c: any) => c.id === branch.id) as any;
       const companySectors = placeholder && Array.isArray(placeholder.sectors) ? placeholder.sectors : [];
+
+      if (editingId) {
+        const original = allConfigs.find(c => c.id === editingId) as any;
+        const originalMethodology = normalizeMethodology(original?.methodology);
+        const existingResponses = responseCounts[editingId] || 0;
+        if (existingResponses > 0 && normalizeMethodology(data.methodology) !== originalMethodology) {
+          throw new Error("Não é possível trocar a metodologia: este formulário já possui respostas coletadas. As respostas antigas não são comparáveis entre metodologias.");
+        }
+      }
 
       if (data.require_password && !data.survey_password.trim()) {
         throw new Error("Defina uma senha para acesso ao formulário.");
@@ -122,7 +132,7 @@ export default function Forms() {
         company_name: branch.name,
         cnpj: branch.cnpj,
         address_city: branch.city || null,
-        methodology: normalizeMethodology(placeholder?.methodology),
+        methodology: normalizeMethodology(data.methodology),
         form_title: data.form_title,
         spreadsheet_id: "__internal__",
         sheet_name: "internal",
@@ -245,6 +255,7 @@ export default function Forms() {
     if (!branch) branch = registeredCompanies.find(c => c.cnpj === cnpj);
     setFormData({
       company_cnpj: branch?.id || "",
+      methodology: normalizeMethodology(cfg.methodology),
       form_title: cfg.form_title || config.company_name,
       description: cfg.description || "",
       instructions: cfg.instructions || "Esta pesquisa é anônima e confidencial. Suas respostas serão utilizadas para melhorar o ambiente de trabalho. Por favor, responda com sinceridade.",
@@ -302,19 +313,6 @@ export default function Forms() {
                     <option value="">Selecione uma empresa...</option>
                     {registeredCompanies.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                   </select>
-                  {(() => {
-                    const selected = registeredCompanies.find(c => c.id === formData.company_cnpj);
-                    if (!selected) return <p className="text-[10px] text-muted-foreground">A metodologia do formulário vem da empresa selecionada.</p>;
-                    const meta = getMethodologyMeta(selected.methodology);
-                    return (
-                      <div className="flex items-center gap-2 pt-1">
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary uppercase tracking-wider">
-                          <Lock className="h-3 w-3" /> {meta.label}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">{meta.questionCount} questões · {meta.duration} min</span>
-                      </div>
-                    );
-                  })()}
                 </div>
 
                 <div className="space-y-1">
@@ -323,6 +321,35 @@ export default function Forms() {
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary transition"
                     placeholder="Ex: Pesquisa PROART 2026 - Sede" />
                 </div>
+
+                <div className="sm:col-span-2 space-y-1">
+                  <label className="text-xs font-medium text-foreground">Metodologia do Formulário *</label>
+                  {(() => {
+                    const locked = !!editingId && (responseCounts[editingId!] || 0) > 0;
+                    return (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {METHODOLOGIES.map(m => (
+                            <button key={m.id} type="button" disabled={locked}
+                              onClick={() => setFormData({ ...formData, methodology: m.id })}
+                              className={cn("text-left rounded-lg border-2 p-3 transition-colors",
+                                formData.methodology === m.id ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40",
+                                locked && "opacity-60 cursor-not-allowed")}>
+                              <span className="block text-sm font-semibold text-foreground">{m.label}</span>
+                              <span className="block text-[11px] text-muted-foreground mt-0.5">{m.description}</span>
+                            </button>
+                          ))}
+                        </div>
+                        {locked ? (
+                          <p className="text-[10px] text-muted-foreground flex items-center gap-1"><Lock className="h-3 w-3" /> A metodologia não pode ser alterada: este formulário já possui respostas coletadas.</p>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground">Cada formulário define sua própria metodologia — a mesma empresa pode ter formulários PROART e COPSOQ II-Br diferentes.</p>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+
                 <div className="sm:col-span-2 space-y-1">
                   <label className="text-xs font-medium text-foreground">Descrição</label>
                   <textarea value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })}
