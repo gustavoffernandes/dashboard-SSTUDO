@@ -620,7 +620,6 @@ export default function PublicSurvey() {
                     question={q}
                     value={answers[q.id]}
                     onChange={v => setAnswer(q.id, v)}
-                    hideLegend={!!scale.sharedOptions}
                     perpetrators={perpetrators[q.id] || []}
                     onPerpetratorsChange={list => setPerpetrators(prev => ({ ...prev, [q.id]: list }))}
                   />
@@ -784,11 +783,10 @@ function StyledSelect({ label, value, onChange, options, required }: { label: st
   );
 }
 
-function QuestionCard({ question, value, onChange, hideLegend, perpetrators = [], onPerpetratorsChange }: {
+function QuestionCard({ question, value, onChange, perpetrators = [], onPerpetratorsChange }: {
   question: ResolvedQuestion;
   value?: number;
   onChange: (v: number) => void;
-  hideLegend?: boolean;
   perpetrators?: string[];
   onPerpetratorsChange?: (list: string[]) => void;
 }) {
@@ -819,7 +817,7 @@ function QuestionCard({ question, value, onChange, hideLegend, perpetrators = []
                 transform: isSelected ? 'scale(1.05)' : 'scale(1)',
               }}>
               <span className="block text-sm font-extrabold">{opt.value}</span>
-              {!hideLegend && <span className="block text-[9px] leading-tight mt-0.5 opacity-90 font-semibold">{opt.label}</span>}
+              <span className="block text-[9px] leading-tight mt-0.5 opacity-90 font-semibold">{opt.label}</span>
             </button>
           );
         })}

@@ -6,13 +6,14 @@ import { questions } from "@/data/mockData";
 import { DateRangeFilter } from "@/components/dashboard/DateRangeFilter";
 import { PageSkeleton } from "@/components/dashboard/PageSkeleton";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { Filter } from "lucide-react";
 import {
   PROART_SCALES, ALL_FACTORS, classifyRisk, getRiskColor,
 } from "@/lib/proartMethodology";
 import {
   COPSOQ_DOMAINS, COPSOQ_SCORABLE_DIMENSIONS, classifyCopsoq, copsoqClassToRiskLevel, dimensionAverage,
 } from "@/lib/copsoqMethodology";
-import { methodologyLabel, type Methodology } from "@/lib/methodology";
+import { METHODOLOGIES, methodologyLabel, type Methodology } from "@/lib/methodology";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, LineChart, Line,
   RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -232,30 +233,38 @@ export default function CompanyComparison() {
         </div>
 
         {/* Global methodology filter */}
-        <div className="rounded-xl border border-border bg-card p-3 sm:p-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-semibold text-muted-foreground">Filtro Global — Metodologia</span>
+        <div className={cn("rounded-xl border-2 p-4 sm:p-5 transition-colors", methodology ? "border-primary/40 bg-primary/[0.04]" : "border-primary bg-primary/5")}>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 shrink-0">
+                <Filter className="h-3.5 w-3.5 text-primary" />
+              </span>
+              <span className="text-sm font-bold text-foreground">Filtro Global — Metodologia</span>
+            </div>
             {methodology && (
-              <button onClick={() => handleMethodologyChange("")} className="text-xs text-muted-foreground hover:text-foreground underline">Limpar</button>
+              <button onClick={() => handleMethodologyChange("")} className="text-xs font-medium text-muted-foreground hover:text-foreground underline shrink-0">Limpar seleção</button>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => handleMethodologyChange("proart")}
-              className={cn("rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all",
-                methodology === "proart" ? "bg-primary text-primary-foreground shadow-md" : "bg-secondary text-secondary-foreground hover:bg-secondary/80")}>
-              PROART
-            </button>
-            <button onClick={() => handleMethodologyChange("copsoq")}
-              className={cn("rounded-lg px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-all",
-                methodology === "copsoq" ? "bg-primary text-primary-foreground shadow-md" : "bg-secondary text-secondary-foreground hover:bg-secondary/80")}>
-              COPSOQ II-Br
-            </button>
+          <p className="text-xs text-muted-foreground mb-3 ml-9">Escolha a metodologia para liberar a comparação — todo o conteúdo da tela depende dela.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {METHODOLOGIES.map(m => (
+              <button key={m.id} type="button" onClick={() => handleMethodologyChange(m.id)}
+                className={cn("text-left rounded-lg border-2 p-3 transition-colors",
+                  methodology === m.id ? "border-primary bg-primary/10 shadow-sm" : "border-border bg-card hover:bg-muted/40")}>
+                <span className="flex items-center gap-2">
+                  <span className={cn("h-2.5 w-2.5 rounded-full shrink-0 border-2", methodology === m.id ? "bg-primary border-primary" : "border-muted-foreground/40")} />
+                  <span className="text-sm font-semibold text-foreground">{m.label}</span>
+                </span>
+                <span className="block text-[11px] text-muted-foreground mt-1 ml-[18px]">{m.description}</span>
+              </button>
+            ))}
           </div>
         </div>
 
         {!methodology && (
-          <div className="flex flex-col items-center justify-center h-48 text-center rounded-xl border border-dashed border-border bg-card/50">
-            <p className="text-sm text-muted-foreground">Selecione a metodologia no filtro global.</p>
+          <div className="flex flex-col items-center justify-center gap-1 h-40 text-center rounded-xl border border-dashed border-border bg-card/50">
+            <p className="text-sm font-medium text-foreground">Nenhuma metodologia selecionada</p>
+            <p className="text-xs text-muted-foreground">Escolha PROART ou COPSOQ II-Br no filtro global acima para ver a comparação.</p>
           </div>
         )}
 
@@ -299,7 +308,7 @@ export default function CompanyComparison() {
                 return (
                   <button key={c.id} onClick={() => toggle(c.id)}
                     className={cn("flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
-                      effectiveSelected.includes(c.id) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50")}>
+                      effectiveSelected.includes(c.id) ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/70 text-secondary-foreground hover:bg-secondary hover:border-primary/50")}>
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} /> {c.name} ({pool.length})
                   </button>
                 );
@@ -400,7 +409,7 @@ export default function CompanyComparison() {
                 return (
                   <button key={c.id} onClick={() => toggle(c.id)}
                     className={cn("flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
-                      effectiveSelected.includes(c.id) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50")}>
+                      effectiveSelected.includes(c.id) ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/70 text-secondary-foreground hover:bg-secondary hover:border-primary/50")}>
                     <span className="h-2 w-2 rounded-full" style={{ backgroundColor: c.color }} /> {c.name} ({pool.length})
                   </button>
                 );
@@ -420,7 +429,7 @@ export default function CompanyComparison() {
                   return (
                     <button key={item.id} onClick={() => toggleFactor(item.id)}
                       className={cn("flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
-                        isSelected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50")}>
+                        isSelected ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/70 text-secondary-foreground hover:bg-secondary hover:border-primary/50")}>
                       <span className={cn("h-3 w-3 rounded-sm border flex items-center justify-center flex-shrink-0",
                         isSelected ? "bg-primary border-primary" : "border-border")}>
                         {isSelected && <svg className="h-2 w-2 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
@@ -530,7 +539,7 @@ export default function CompanyComparison() {
                     return (
                       <button key={sa.sector} onClick={() => toggleSector(sa.sector)}
                         className={cn("flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
-                          isSelected ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:border-primary/50")}>
+                          isSelected ? "border-primary bg-primary/10 text-primary" : "border-border bg-secondary/70 text-secondary-foreground hover:bg-secondary hover:border-primary/50")}>
                         <span className={cn("h-3 w-3 rounded-sm border flex items-center justify-center flex-shrink-0",
                           isSelected ? "bg-primary border-primary" : "border-border")}>
                           {isSelected && <svg className="h-2 w-2 text-primary-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
