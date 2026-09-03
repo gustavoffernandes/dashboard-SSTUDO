@@ -1,5 +1,7 @@
 import { type Question } from "@/data/mockData";
 import { PROART_SCALES, classifyRisk, getRiskLabel } from "@/lib/proartMethodology";
+import { COPSOQ_DOMAINS, classifyCopsoq, copsoqClassLabel, dimensionAverage, offensiveSummary } from "@/lib/copsoqMethodology";
+import { getCopsoqQuestionsByDomain, COPSOQ_OPTION_SETS } from "@/lib/copsoqQuestions";
 
 export interface ExportData {
   companies: { id: string; name: string; sector: string; employees: number }[];
@@ -84,6 +86,91 @@ export function exportCompanyReport(companyId: string, data: ExportData) {
   });
 
   downloadCSV(`relatorio_${company.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.csv`, lines.join("\n"));
+}
+
+export interface CopsoqExportData {
+  companies: { id: string; name: string; sector: string; employees: number }[];
+  getCompanyRespondents: (companyId: string) => any[];
+}
+
+/** Exportação CSV do relatório individual para empresas com metodologia COPSOQ II-Br. */
+export function exportCompanyCopsoqReport(companyId: string, data: CopsoqExportData) {
+  const company = data.companies.find(c => c.id === companyId);
+  if (!company) return;
+  const pool = data.getCompanyRespondents(companyId) as any[];
+  const bags = pool.map((r: any) => ({ answers: r.answers as Record<string, number> }));
+  const lines: string[] = [];
+
+  lines.push(`RELATÓRIO SSTudo - COPSOQ II-Br - ${company.name}`);
+  lines.push(`Setor: ${company.sector}`);
+  lines.push(`Funcionários: ${company.employees}`);
+  lines.push(`Questionários preenchidos: ${pool.length}`);
+  lines.push(`Data de geração: ${new Date().toLocaleDateString("pt-BR")}`);
+  lines.push("");
+
+  lines.push("RESUMO POR DOMÍNIO E DIMENSÃO");
+  lines.push("Domínio,Dimensão,Pontuação,Máximo,Classificação");
+  COPSOQ_DOMAINS.forEach(domain => {
+    domain.dimensions.filter(d => d.scorable).forEach(d => {
+      const avg = dimensionAverage(d, bags);
+      const cls = classifyCopsoq(d, avg);
+      lines.push(`"${domain.name}","${d.name}",${avg.toFixed(2)},${d.maxScore},${copsoqClassLabel(cls)}`);
+    });
+  });
+  lines.push("");
+
+  const domainBlocks = getCopsoqQuestionsByDomain();
+  domainBlocks.forEach(block => {
+    const answeredQs = block.questions.filter(q => pool.some((r: any) => typeof r.answers?.[q.id] === "number"));
+    if (answeredQs.length === 0) return;
+    lines.push(`DETALHAMENTO - ${block.fullName.toUpperCase()}`);
+    lines.push("Código,Pergunta,Dimensão,Média,Distribuição (opção:qtd:%)");
+    answeredQs.forEach(q => {
+      const values = pool.map((r: any) => r.answers?.[q.id]).filter((v: any) => typeof v === "number") as number[];
+      const total = values.length;
+      const avg = total > 0 ? values.reduce((a, b) => a + b, 0) / total : 0;
+      const options = COPSOQ_OPTION_SETS[q.optionSet];
+      const dist = options.map(o => {
+        const c = values.filter(v => v === o.value).length;
+        return `${o.label}:${c}:${total > 0 ? Math.round((c / total) * 100) : 0}%`;
+      }).join(" | ");
+      lines.push(`${q.code},"${q.text}",${q.dimensionId},${avg.toFixed(2)},"${dist}"`);
+    });
+    lines.push("");
+  });
+
+  lines.push("COMPORTAMENTOS OFENSIVOS (últimos 12 meses)");
+  lines.push("Comportamento,Respondentes,Relataram exposição,%,Frequência semanal/diária");
+  offensiveSummary(bags).forEach(o => {
+    lines.push(`"${o.dimension.name}",${o.total},${o.exposed},${o.pctExposed}%,${o.frequent}`);
+  });
+  lines.push("");
+
+  lines.push("PERFIL DEMOGRÁFICO DOS RESPONDENTES");
+  lines.push("Gênero,Quantidade,%");
+  const sexGroups: Record<string, number> = {};
+  pool.forEach((r: any) => {
+    const sex = r.sex || "Não informado";
+    sexGroups[sex] = (sexGroups[sex] || 0) + 1;
+  });
+  Object.entries(sexGroups).forEach(([sex, count]) => {
+    lines.push(`${sex},${count},${pool.length > 0 ? Math.round((count / pool.length) * 100) : 0}%`);
+  });
+  lines.push("");
+
+  lines.push("Faixa Etária,Quantidade");
+  const ageRanges = [
+    { label: "18-25", min: 18, max: 25 },
+    { label: "26-35", min: 26, max: 35 },
+    { label: "36-45", min: 36, max: 45 },
+    { label: "46-55", min: 46, max: 55 },
+    { label: "56+", min: 56, max: 200 },
+  ];
+  ageRanges.forEach(r => {
+    lines.push(`${r.label},${pool.filter((resp: any) => (resp.age || 0) >= r.min && (resp.age || 0) <= r.max).length}`);
+  });
+
+  downloadCSV(`relatorio_COPSOQ_${company.name.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.csv`, lines.join("\n"));
 }
 
 export function exportComparisonReport(companyIds: string[], data: ExportData) {
