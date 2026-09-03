@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useSurveyData } from "@/hooks/useSurveyData";
 import { questions, sections } from "@/data/mockData";
 import { exportCompanyPDF } from "@/lib/pdfExport";
+import { exportCompanyCopsoqPDF } from "@/lib/copsoqPdfExport";
 import { normalizeMethodology, methodologyLabel, getMethodologyMeta } from "@/lib/methodology";
 
 interface FormConfig {
@@ -209,7 +210,7 @@ export default function Forms() {
       const companyRespondents = surveyData.getCompanyRespondents(companyKey);
       if (companyRespondents.length === 0) { toast({ title: "Nenhuma resposta encontrada para este formulário", variant: "destructive" }); return; }
 
-      exportCompanyPDF(companyKey, {
+      const payload = {
         companies: [company],
         sections,
         questions,
@@ -221,7 +222,14 @@ export default function Forms() {
         getAvailableSections: surveyData.getAvailableSections,
         getAvailableQuestions: surveyData.getAvailableQuestions,
         formConfigs: [{ configId: config.id, title: (config as any).form_title || config.company_name }],
-      });
+      };
+
+      const methodology = normalizeMethodology(cfgAny.methodology);
+      if (methodology === "copsoq") {
+        exportCompanyCopsoqPDF(companyKey, payload, (config as any).form_title || config.company_name);
+      } else {
+        exportCompanyPDF(companyKey, payload, (config as any).form_title || config.company_name);
+      }
       toast({ title: "PDF gerado com sucesso!" });
     } catch (e: any) {
       toast({ title: "Erro ao gerar PDF", description: e.message, variant: "destructive" });

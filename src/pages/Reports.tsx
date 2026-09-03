@@ -6,12 +6,13 @@ import { useActionPlans } from "@/hooks/useActionPlans";
 import { useAuth } from "@/contexts/AuthContext";
 import { useGlobalFilter } from "@/contexts/GlobalFilterContext";
 import { questions, sections } from "@/data/mockData";
-import { exportCompanyReport, exportComparisonReport, exportRawData } from "@/lib/exportUtils";
+import { exportCompanyReport, exportCompanyCopsoqReport, exportComparisonReport, exportRawData } from "@/lib/exportUtils";
 import { exportCompanyPDF, exportComparisonPDF } from "@/lib/pdfExport";
 import { exportCompanyCopsoqPDF } from "@/lib/copsoqPdfExport";
+import { COPSOQ_QUESTIONS } from "@/lib/copsoqQuestions";
 import {
   COPSOQ_DOMAINS, COPSOQ_SCORABLE_DIMENSIONS, classifyCopsoq, copsoqClassLabel, copsoqBandsText,
-  dimensionAverage, dimensionScore, calculateCopsoqPxS, offensiveSummary,
+  dimensionAverage, dimensionScore, normalizedRisk, getCopsoqDimension, calculateCopsoqPxS, offensiveSummary,
 } from "@/lib/copsoqMethodology";
 import {
   PROART_SCALES, ALL_FACTORS, classifyRisk, getRiskLabel, getRiskColor, getRiskBgColor,
@@ -203,6 +204,33 @@ export default function Reports() {
     return { sector, count: sectorPool.length, sectionAvgs };
   });
 
+  // Sector breakdown for COPSOQ (normalized risk index 0-100 per domain)
+  const copsoqScorableDomains = COPSOQ_DOMAINS.filter(d => d.dimensions.some(x => x.scorable));
+  const copsoqSectorAvgs = [...new Set(pool.map(r => r.sector))].sort().map(sector => {
+    const sectorPool = pool.filter(r => r.sector === sector);
+    const sectorBags = sectorPool.map(r => ({ answers: r.answers }));
+    const domainIdx: Record<string, number | null> = {};
+    copsoqScorableDomains.forEach(dom => {
+      const dims = dom.dimensions.filter(x => x.scorable);
+      const vals = dims.map(d => {
+        const withData = sectorBags.filter(b => dimensionScore(d, b.answers) !== null);
+        if (withData.length === 0) return null;
+        return normalizedRisk(d, dimensionAverage(d, withData));
+      }).filter((v): v is number => v !== null);
+      domainIdx[dom.id] = vals.length > 0 ? Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 100) : null;
+    });
+    return { sector, count: sectorPool.length, domainIdx };
+  });
+
+  // Questions actually answered (used for the KPI tile and for outlier detection)
+  const answeredQuestionIds = new Set(pool.flatMap(r => Object.keys(r.answers)));
+  const questionsAnsweredCount = isCopsoq
+    ? COPSOQ_QUESTIONS.filter(q => answeredQuestionIds.has(q.id)).length
+    : availableQuestionsList.length;
+  const outlierSourceQuestions: { id: string; label: string }[] = isCopsoq
+    ? COPSOQ_QUESTIONS.filter(q => answeredQuestionIds.has(q.id)).map(q => ({ id: q.id, label: `${q.code}. ${q.text}` }))
+    : availableQuestionsList.map(q => ({ id: q.id, label: `${q.number}. ${q.text}` }));
+
   // Outliers (filtered by selected form)
   const outliers = (() => {
     const threshold = 1.5;
@@ -217,7 +245,7 @@ export default function Reports() {
     Object.values(sectorGroups).forEach((sectorRespondents) => {
       if (sectorRespondents.length < 3) return;
 
-      availableQuestionsList.forEach(q => {
+      outlierSourceQuestions.forEach(q => {
         const answers = sectorRespondents.filter(r => r.answers[q.id] !== undefined).map(r => r.answers[q.id]);
         if (answers.length < 3) return;
 
@@ -244,17 +272,29 @@ export default function Reports() {
     return detected.sort((a, b) => b.deviation - a.deviation).slice(0, 15);
   })();
 
-  // Critical companies (any factor with high risk)
+  // Critical companies (any factor/dimension with high risk) — evaluated per company's own methodology
+  const getCompanyMethodology = (companyId: string): "proart" | "copsoq" => {
+    const forms = surveyData.getFormConfigsForCompany(companyId);
+    return forms.length > 0 && forms.every(f => f.methodology === "copsoq") ? "copsoq" : "proart";
+  };
+
   const criticalCompanies = companies.map(c => {
     const cPool = getCompanyRespondents(c.id);
+    if (getCompanyMethodology(c.id) === "copsoq") {
+      const cBags = cPool.map(r => ({ answers: r.answers }));
+      const highRiskFactors = COPSOQ_SCORABLE_DIMENSIONS.map(d => {
+        const avg = dimensionAverage(d, cBags);
+        return { id: d.id, shortName: d.shortName, avg, risk: classifyCopsoq(d, avg) };
+      }).filter(f => f.risk === "risco");
+      return { ...c, highRiskFactors, highRiskCount: highRiskFactors.length };
+    }
     const cFactors = ALL_FACTORS.map(f => {
       const answers = cPool.flatMap(r => f.questionIds.map(qId => r.answers[qId]).filter(v => v !== undefined));
       const avg = answers.length > 0 ? answers.reduce((a, b) => a + b, 0) / answers.length : 0;
-      return { ...f, avg, risk: classifyRisk(avg, f.type) };
+      return { id: f.id, shortName: f.shortName, avg, risk: classifyRisk(avg, f.type) };
     });
     const highRiskFactors = cFactors.filter(f => f.risk === "high");
-    const overallAvg = availableSections.length > 0 ? availableSections.reduce((acc, s) => acc + getSectionAverage(s.id, c.id), 0) / availableSections.length : 0;
-    return { ...c, average: overallAvg, highRiskFactors, highRiskCount: highRiskFactors.length };
+    return { ...c, highRiskFactors, highRiskCount: highRiskFactors.length };
   }).filter(c => c.highRiskCount > 0).sort((a, b) => b.highRiskCount - a.highRiskCount);
 
   const allSectors = [...new Set(respondents.filter(r => effectiveCompareIds.includes(r.companyId)).map(r => r.sector))].sort();
@@ -309,7 +349,10 @@ export default function Reports() {
                 if (isCopsoq) exportCompanyCopsoqPDF(effectiveCompany, payload, scope);
                 else exportCompanyPDF(effectiveCompany, payload, scope);
               })} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"><FileDown className="h-4 w-4" /> PDF</button>
-              <button onClick={() => handleExport("CSV", () => exportCompanyReport(effectiveCompany, individualExportData))} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"><Download className="h-4 w-4" /> CSV</button>
+              <button onClick={() => handleExport("CSV", () => {
+                if (isCopsoq) exportCompanyCopsoqReport(effectiveCompany, individualExportData);
+                else exportCompanyReport(effectiveCompany, individualExportData);
+              })} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"><Download className="h-4 w-4" /> CSV</button>
             </div>
           </div>
 
@@ -324,7 +367,7 @@ export default function Reports() {
           {/* KPIs + P×S */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-5">
             <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-foreground">{pool.length}</p><p className="text-xs text-muted-foreground">Respostas</p></div>
-            <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-foreground">{availableQuestionsList.length}</p><p className="text-xs text-muted-foreground">Questões</p></div>
+            <div className="rounded-lg bg-muted/50 p-3 text-center"><p className="text-2xl font-bold text-foreground">{questionsAnsweredCount}</p><p className="text-xs text-muted-foreground">Questões</p></div>
             <div className={cn("rounded-lg p-3 text-center", getPRLevelBgColor(pxs.prLevel))}>
               <p className={cn("text-2xl font-bold", getPRLevelColor(pxs.prLevel))}>{pxs.risk}</p>
               <p className="text-xs text-muted-foreground">P×S ({pxs.P}×{pxs.S})</p>
@@ -466,32 +509,65 @@ export default function Reports() {
           </div>
 
           {/* Setor breakdown */}
-          {sectorAvgs.length > 0 && (
-            <div className="overflow-x-auto mb-5">
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Respostas por Setor</h4>
-              <table className="w-full text-sm"><thead><tr className="border-b border-border"><th className="px-4 py-2 text-left font-semibold text-muted-foreground">Setor</th><th className="px-4 py-2 text-center font-semibold text-muted-foreground">Respondidos</th><th className="px-4 py-2 text-center font-semibold text-muted-foreground">% do Total</th>{availableSectionsForPool.map(s => <th key={s.id} className="px-4 py-2 text-center font-semibold text-muted-foreground">{s.shortName}</th>)}</tr></thead>
-                <tbody>{sectorAvgs.map(sa => (
-                  <tr key={sa.sector} className="border-b border-border/50">
-                    <td className="px-4 py-2 font-medium text-foreground">{sa.sector}</td>
-                    <td className="px-4 py-2 text-center text-muted-foreground">{sa.count}</td>
-                    <td className="px-4 py-2 text-center text-muted-foreground">{pool.length > 0 ? `${Math.round((sa.count / pool.length) * 100)}%` : "0%"}</td>
-                    {availableSectionsForPool.map(s => {
-                      const val = sa.sectionAvgs[s.id] || 0;
-                      const scale = PROART_SCALES.find(sc => sc.id === s.id);
-                      const scaleType = scale?.type === "positive" ? "positive" as const : "negative" as const;
-                      const risk = classifyRisk(val, scaleType);
-                      return (
-                        <td key={s.id} className="px-4 py-2 text-center">
-                          <div className="inline-flex flex-col items-center leading-tight">
-                            <span className={cn("font-bold", getRiskColor(risk))}>{val.toFixed(2)}</span>
-                            <span className={cn("text-[10px] font-semibold uppercase tracking-wide", getRiskColor(risk))}>{getRiskLabel(risk).replace("Risco ", "")}</span>
-                          </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}</tbody></table>
-            </div>
+          {isCopsoq ? (
+            copsoqSectorAvgs.length > 0 && (
+              <div className="overflow-x-auto mb-5">
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2">Respostas por Setor (Índice de Risco por Domínio)</h4>
+                <table className="w-full text-sm"><thead><tr className="border-b border-border"><th className="px-4 py-2 text-left font-semibold text-muted-foreground">Setor</th><th className="px-4 py-2 text-center font-semibold text-muted-foreground">Respondidos</th><th className="px-4 py-2 text-center font-semibold text-muted-foreground">% do Total</th>{copsoqScorableDomains.map(d => <th key={d.id} className="px-4 py-2 text-center font-semibold text-muted-foreground">{d.shortName}</th>)}</tr></thead>
+                  <tbody>{copsoqSectorAvgs.map(sa => (
+                    <tr key={sa.sector} className="border-b border-border/50">
+                      <td className="px-4 py-2 font-medium text-foreground">{sa.sector}</td>
+                      <td className="px-4 py-2 text-center text-muted-foreground">{sa.count}</td>
+                      <td className="px-4 py-2 text-center text-muted-foreground">{pool.length > 0 ? `${Math.round((sa.count / pool.length) * 100)}%` : "0%"}</td>
+                      {copsoqScorableDomains.map(d => {
+                        const val = sa.domainIdx[d.id];
+                        if (val === null || val === undefined) {
+                          return <td key={d.id} className="px-4 py-2 text-center text-muted-foreground">—</td>;
+                        }
+                        const colorClass = val >= 67 ? "text-destructive" : val >= 34 ? "text-warning" : "text-success";
+                        const label = val >= 67 ? "RISCO" : val >= 34 ? "ATENÇÃO" : "SEGURO";
+                        return (
+                          <td key={d.id} className="px-4 py-2 text-center">
+                            <div className="inline-flex flex-col items-center leading-tight">
+                              <span className={cn("font-bold", colorClass)}>{val}</span>
+                              <span className={cn("text-[10px] font-semibold uppercase tracking-wide", colorClass)}>{label}</span>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}</tbody></table>
+                <p className="text-[11px] text-muted-foreground mt-2">Índice de risco normalizado por domínio: 0 = melhor cenário possível, 100 = pior cenário possível.</p>
+              </div>
+            )
+          ) : (
+            sectorAvgs.length > 0 && (
+              <div className="overflow-x-auto mb-5">
+                <h4 className="text-xs font-semibold text-muted-foreground mb-2">Respostas por Setor</h4>
+                <table className="w-full text-sm"><thead><tr className="border-b border-border"><th className="px-4 py-2 text-left font-semibold text-muted-foreground">Setor</th><th className="px-4 py-2 text-center font-semibold text-muted-foreground">Respondidos</th><th className="px-4 py-2 text-center font-semibold text-muted-foreground">% do Total</th>{availableSectionsForPool.map(s => <th key={s.id} className="px-4 py-2 text-center font-semibold text-muted-foreground">{s.shortName}</th>)}</tr></thead>
+                  <tbody>{sectorAvgs.map(sa => (
+                    <tr key={sa.sector} className="border-b border-border/50">
+                      <td className="px-4 py-2 font-medium text-foreground">{sa.sector}</td>
+                      <td className="px-4 py-2 text-center text-muted-foreground">{sa.count}</td>
+                      <td className="px-4 py-2 text-center text-muted-foreground">{pool.length > 0 ? `${Math.round((sa.count / pool.length) * 100)}%` : "0%"}</td>
+                      {availableSectionsForPool.map(s => {
+                        const val = sa.sectionAvgs[s.id] || 0;
+                        const scale = PROART_SCALES.find(sc => sc.id === s.id);
+                        const scaleType = scale?.type === "positive" ? "positive" as const : "negative" as const;
+                        const risk = classifyRisk(val, scaleType);
+                        return (
+                          <td key={s.id} className="px-4 py-2 text-center">
+                            <div className="inline-flex flex-col items-center leading-tight">
+                              <span className={cn("font-bold", getRiskColor(risk))}>{val.toFixed(2)}</span>
+                              <span className={cn("text-[10px] font-semibold uppercase tracking-wide", getRiskColor(risk))}>{getRiskLabel(risk).replace("Risco ", "")}</span>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}</tbody></table>
+              </div>
+            )
           )}
 
           {/* Outliers */}
@@ -501,12 +577,12 @@ export default function Reports() {
               <div className="overflow-x-auto">
                 <table className="w-full text-xs"><thead><tr className="border-b border-warning/20"><th className="px-3 py-1.5 text-left text-muted-foreground">Respondente</th><th className="px-3 py-1.5 text-left text-muted-foreground">Setor</th><th className="px-3 py-1.5 text-left text-muted-foreground">Pergunta</th><th className="px-3 py-1.5 text-center text-muted-foreground">Resposta</th><th className="px-3 py-1.5 text-center text-muted-foreground">Média Setor</th><th className="px-3 py-1.5 text-center text-muted-foreground">Desvio</th></tr></thead>
                   <tbody>{outliers.map((o, i) => {
-                    const q = availableQuestionsList.find(q => q.id === o.questionId);
+                    const q = outlierSourceQuestions.find(x => x.id === o.questionId);
                     return (
                       <tr key={i} className="border-b border-warning/10">
                         <td className="px-3 py-1.5 font-medium text-foreground">{isCompanyUser ? `Respondente ${i + 1}` : (o.respondent.name || `Respondente ${i + 1}`)}</td>
                         <td className="px-3 py-1.5 text-muted-foreground">{o.respondent.sector}</td>
-                        <td className="px-3 py-1.5 text-foreground max-w-[200px] truncate">{q?.text || o.questionId}</td>
+                        <td className="px-3 py-1.5 text-foreground max-w-[200px] truncate">{q?.label || o.questionId}</td>
                         <td className="px-3 py-1.5 text-center font-bold text-warning">{o.value}</td>
                         <td className="px-3 py-1.5 text-center text-foreground">{o.sectorAvg}</td>
                         <td className="px-3 py-1.5 text-center"><span className="inline-flex rounded-full bg-warning/20 px-2 py-0.5 text-[10px] font-bold text-warning">{o.deviation}σ</span></td>
@@ -544,6 +620,7 @@ export default function Reports() {
                     const planTasks = tasks.filter(t => t.action_plan_id === plan.id);
                     const completedTasks = planTasks.filter(t => t.is_completed).length;
                     const factor = ALL_FACTORS.find(f => f.id === plan.factor_id);
+                    const copsoqDim = !factor ? getCopsoqDimension(plan.factor_id) : undefined;
                     return (
                       <div key={plan.id} className="rounded-lg border border-border p-4">
                         <div className="flex items-start justify-between gap-2 mb-2">
@@ -559,7 +636,7 @@ export default function Reports() {
                           </span>
                         </div>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>Fator: <strong className="text-foreground">{factor?.shortName || plan.factor_id}</strong></span>
+                          <span>{factor ? "Fator" : "Dimensão"}: <strong className="text-foreground">{factor?.shortName || copsoqDim?.shortName || plan.factor_id}</strong></span>
                           <span>Nível: <strong className="text-foreground">{plan.risk_level}</strong></span>
                           <span>Tarefas: <strong className="text-foreground">{completedTasks}/{planTasks.length} concluídas</strong></span>
                         </div>
