@@ -31,11 +31,11 @@ export const COPSOQ_OPTION_SETS: Record<CopsoqOptionSetId, CopsoqOption[]> = {
   ],
   // Item 1B — pontuação invertida
   freq_risk_inverted: [
-    { value: 4, label: "Nunca" },
-    { value: 3, label: "Raramente" },
-    { value: 2, label: "Às vezes" },
-    { value: 1, label: "Frequentemente" },
     { value: 0, label: "Sempre" },
+    { value: 1, label: "Frequentemente" },
+    { value: 2, label: "Às vezes" },
+    { value: 3, label: "Raramente" },
+    { value: 4, label: "Nunca" },
   ],
   // Quanto maior a pontuação, menor o risco
   freq_good: [
